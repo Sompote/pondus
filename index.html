@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pondus · Structural analysis and design you can talk to</title>
+<meta name="description" content="Pondus is an open-source structural analysis and design program with a built-in AI agent and an MCP server. 3D frames, slabs, shear walls, earthquake, pushover, ACI 318-19, AISC 360-16 and Eurocode 3, PDF reports, Excel, DXF and IFC.">
+<meta property="og:title" content="Pondus · Structural analysis and design you can talk to">
+<meta property="og:description" content="Ask an AI agent to build, analyse and design a building, then check every number yourself in the same model.">
+<meta property="og:image" content="assets/img/burj-khalifa-modes.png">
+<link rel="icon" type="image/png" href="assets/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Pondus home">
+      <img class="logo-light" src="assets/img/logo.png" alt="Pondus">
+      <img class="logo-dark" src="assets/img/logo-dark.png" alt="Pondus">
+    </a>
+    <button class="nav-toggle" aria-label="Menu">☰</button>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#lab">Try the analysis</a>
+      <a href="#example">Burj Khalifa</a>
+      <a href="#verification">Verification</a>
+      <a href="manual.html">Manual</a>
+      <a href="manual.html#mcp">MCP</a>
+      <a href="https://github.com/Sompote/pondus" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-primary btn-sm" href="#download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================ HERO ============================ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Open source · AGPL-3.0 · macOS and Windows</span>
+      <h1>Structural analysis and design <span>you can talk to.</span></h1>
+      <p class="lede">Ask an AI agent to build, analyse and design a building, then check every number yourself in the same model. 3D frames, slabs and shear walls, earthquake, pushover and moving loads, with concrete to ACI 318-19 and steel to AISC 360-16 or Eurocode 3.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="#download">⬇ Download Pondus 0.1.3</a>
+        <a class="btn btn-ghost" href="manual.html">Read the manual</a>
+        <a class="btn btn-ghost" href="manual.html#mcp">Connect Claude or ChatGPT</a>
+      </div>
+      <p class="hero-note">Free software. The analysis runs on the verified Stabileo engine. Structural results from any software must be checked by a qualified engineer.</p>
+    </div>
+    <div class="hero-anim" aria-label="Animation: the agent builds, analyses and designs a three-storey concrete frame">
+      <div class="titlebar"><i></i><i></i><i></i><span>Pondus — model.pondus</span></div>
+      <canvas id="hero-canvas"></canvas>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="stats reveal">
+      <div class="stat"><b>470</b><span>comparisons with textbooks and code examples, 430 within 0.5 %</span></div>
+      <div class="stat"><b>199</b><span>SAP2000 and ETABS verification problems, 177 within 0.5 %</span></div>
+      <div class="stat"><b>46</b><span>MCP tools, the same commands the ribbon uses</span></div>
+      <div class="stat"><b>~60 s</b><span>156-storey tower, 41,000 elements, 60 modes, on 16 cores</span></div>
+      <div class="stat"><b>3 codes</b><span>ACI 318-19, AISC 360-16, Eurocode 3, plus NDS, TMS 402, AISI</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= WHAT IT DOES ======================== -->
+<section id="what">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">For the civil engineer</span>
+      <h2>Two ways to build the same model</h2>
+      <p class="lede">The agent and your own hand act on one model through the same commands, so everything the agent does can be inspected, edited and undone in the ordinary interface.</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="card reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>Tell it what to build</h3>
+        <p>Type <em>"a 3-storey concrete frame, 3 bays of 6 m by 2 bays of 5 m, 150 mm slabs, office live load, design the beams and slabs"</em>. The agent builds, analyses and designs while you watch.</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
+        <h3>Or draw it yourself</h3>
+        <p>Beams, columns, bays, slabs, walls, supports and loads are drawn with the mouse. Switch between the agent and your hand at any time, and Undo takes back either.</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>Analyse and design</h3>
+        <p>3D frames with slabs and shear walls, response spectrum (CQC or SRSS), P-Delta and buckling, pushover, moving loads, construction stages and time history. Bars and shapes chosen for you.</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <h3>Report and exchange</h3>
+        <p>One click writes the full calculation report as a PDF. Models move in and out as Excel, DXF (AutoCAD) and IFC (Revit and BIM), and back to Aedifex.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== FEATURES ========================= -->
+<section id="features" style="background: var(--surface-2);">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Features</span>
+      <h2>What you see on the screen</h2>
+      <p class="lede">Click any picture to enlarge it. All of them are screenshots of Pondus 0.1.</p>
+    </div>
+    <div class="grid grid-2">
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/moments.png" data-caption="Bending moment diagram of a 3-storey frame with the design table below"><img loading="lazy" src="assets/img/features/moments.png" alt="Bending moment diagram of a 3-storey frame"></div>
+        <div class="body"><h3>Bending moments and forces</h3><p>Every member's moment, shear and axial force is drawn on the model, and the design table lists the bars chosen for every beam.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/design-ratios.png" data-caption="Design ratio colours: green below 0.7, yellow below 0.9, orange below 1.0, red when it fails"><img loading="lazy" src="assets/img/features/design-ratios.png" alt="Design ratio colours"></div>
+        <div class="body"><h3>Design ratios at a glance</h3><p>After design, every member and slab is coloured by how hard it works: green below 0.7, yellow below 0.9, orange below 1.0 and red when it fails.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/earthquake.png" data-caption="Earthquake settings, modes and the storey drift check"><img loading="lazy" src="assets/img/features/earthquake.png" alt="Earthquake settings, modes and drift check"></div>
+        <div class="body"><h3>Earthquake analysis</h3><p>Response spectrum after ASCE 7-22 and the Thai DPT 1301/1302-61, with the modes, the base shear and the storey drift check. Click any member to see its forces and its full ACI design.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/slab-plate.png" data-caption="Slab plate moments in plan, with the bars computed by Wood–Armer"><img loading="lazy" src="assets/img/features/slab-plate.png" alt="Slab plate moments in plan"></div>
+        <div class="body"><h3>Slabs as plates</h3><p>Slabs can be designed by the code coefficient tables or meshed as MITC4 plates with the frame, with the moments shown in colour and the bars computed from them. A plate can also rest on columns or piles alone: a flat plate, a pile cap or a mat on soil, with the punching check at every support.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/shear-wall.png" data-caption="A shear wall in a frame, designed storey by storey to ACI 318-19 Chapters 11 and 18"><img loading="lazy" src="assets/img/features/shear-wall.png" alt="A shear wall in a frame"></div>
+        <div class="body"><h3>Shear walls</h3><p>Draw a wall, and Pondus connects it to the floors, analyses it by the wide-column analogy and designs it storey by storey to ACI 318-19 Chapters 11 and 18.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/moving-load.png" data-caption="Moving load envelope along a bridge girder"><img loading="lazy" src="assets/img/features/moving-load.png" alt="Moving load envelope"></div>
+        <div class="body"><h3>Moving loads and bridges</h3><p>Run a truck or any train of axles along the beams. Pondus finds the worst position at every point and designs the members for it, within 0.16 % of the FHWA HL-93 envelopes.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/pushover.png" data-caption="Pushover: hinge sequence and capacity curve"><img loading="lazy" src="assets/img/features/pushover.png" alt="Pushover analysis"></div>
+        <div class="body"><h3>Pushover</h3><p>Push the building sideways until it forms a mechanism, and read the collapse load, the hinge sequence and the capacity curve.</p></div>
+      </article>
+      <article class="feature reveal">
+        <div class="shot" data-zoom="assets/img/features/draw-by-hand.png" data-caption="A portal drawn by hand with the agent panel open"><img loading="lazy" src="assets/img/features/draw-by-hand.png" alt="A portal drawn by hand with the agent panel open"></div>
+        <div class="body"><h3>Drawing by hand and the agent side by side</h3><p>Draw with the toolbar and the palette, edit in the tables, or ask the agent in the chat on the right. Both work on the same model.</p></div>
+      </article>
+      <article class="feature wide reveal">
+        <div class="shot" data-zoom="assets/img/features/report.png" data-caption="Pages of the calculation report"><img loading="lazy" src="assets/img/features/report.png" alt="Pages of the calculation report"></div>
+        <div class="body"><h3>The calculation report</h3><p>One click writes the PDF: basis of design, loads and their balance, diagrams, every design table and the full calculation of the governing members.</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== ANALYSIS LAB ======================= -->
+<section id="lab-section">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Try the analysis in your browser</span>
+      <h2>Three small calculators, the same formulas Pondus checks itself against</h2>
+      <p class="lede">A beam under load, the ASCE 7-22 design spectrum with the base shear coefficient, and the mode shapes of a shear building. Everything runs in this page, nothing is sent anywhere.</p>
+    </div>
+    <div class="lab reveal" id="lab">
+      <div class="tabs" role="tablist">
+        <button class="active" data-panel="panel-beam">Beam: moment, shear, deflection</button>
+        <button data-panel="panel-spec">Earthquake: response spectrum and Cs</button>
+        <button data-panel="panel-modes">Mode shapes of a building</button>
+      </div>
+
+      <!-- Beam -->
+      <div class="panel active" id="panel-beam">
+        <div class="controls">
+          <label for="b-type">Support condition</label>
+          <select id="b-type"><option value="ss">Simply supported</option><option value="ff">Fixed at both ends</option><option value="cant">Cantilever (fixed at the left)</option></select>
+          <label for="b-L">Span L (m)</label><input id="b-L" type="number" value="6" min="0.5" max="30" step="0.1">
+          <label for="b-w">Uniform load w (kN/m)</label><input id="b-w" type="number" value="25" min="0" step="1">
+          <div class="row">
+            <div><label for="b-P">Point load P (kN)</label><input id="b-P" type="number" value="0" min="0" step="5"></div>
+            <div><label for="b-a">at a (m from left)</label><input id="b-a" type="number" value="3" min="0" step="0.1"></div>
+          </div>
+          <div class="row">
+            <div><label for="b-b">Width b (mm)</label><input id="b-b" type="number" value="300" min="100" step="50"></div>
+            <div><label for="b-h">Depth h (mm)</label><input id="b-h" type="number" value="600" min="100" step="50"></div>
+          </div>
+          <label for="b-E">E (MPa)</label><input id="b-E" type="number" value="25000" min="1000" step="1000">
+          <p class="hint">Gross rectangular section, linear elastic. Pondus's own tests check a simply supported beam to wL²/8, wL/2 and 5wL⁴/384EI within 0.1 %.</p>
+        </div>
+        <div>
+          <svg id="beam-plot" class="plot" role="img" aria-label="Moment, shear and deflection diagrams"></svg>
+          <div class="results" id="beam-results"></div>
+          <p class="formula" id="beam-check"></p>
+        </div>
+      </div>
+
+      <!-- Spectrum -->
+      <div class="panel" id="panel-spec">
+        <div class="controls">
+          <div class="row">
+            <div><label for="s-sds">S<sub>DS</sub> (g)</label><input id="s-sds" type="number" value="0.5" min="0.05" max="2.5" step="0.05"></div>
+            <div><label for="s-sd1">S<sub>D1</sub> (g)</label><input id="s-sd1" type="number" value="0.3" min="0.02" max="1.5" step="0.02"></div>
+          </div>
+          <div class="row">
+            <div><label for="s-tl">T<sub>L</sub> (s)</label><input id="s-tl" type="number" value="8" min="2" max="16" step="1"></div>
+            <div><label for="s-ie">I<sub>e</sub></label><input id="s-ie" type="number" value="1.0" min="1" max="1.5" step="0.25"></div>
+          </div>
+          <label for="s-r">Response modification R</label>
+          <select id="s-r"><option value="8">8 · special RC or steel moment frame</option><option value="5" selected>5 · intermediate RC moment frame / special RC shear wall (bearing)</option><option value="6">6 · special RC shear wall (building frame)</option><option value="3">3 · ordinary RC moment frame</option><option value="4">4 · ordinary RC shear wall</option></select>
+          <label for="s-ct">Structure type for T<sub>a</sub> = C<sub>t</sub>·h<sub>n</sub><sup>x</sup></label>
+          <select id="s-ct"><option value="0.0466,0.9" selected>Concrete moment frame (0.0466, 0.9)</option><option value="0.0724,0.8">Steel moment frame (0.0724, 0.8)</option><option value="0.0731,0.75">Braced frame (0.0731, 0.75)</option><option value="0.0488,0.75">All other systems (0.0488, 0.75)</option></select>
+          <div class="row">
+            <div><label for="s-hn">Height h<sub>n</sub> (m)</label><input id="s-hn" type="number" value="10.5" min="3" max="300" step="0.5"></div>
+            <div><label for="s-T">T from the model (s, 0 = none)</label><input id="s-T" type="number" value="0.65" min="0" max="12" step="0.01"></div>
+          </div>
+          <label for="s-W">Seismic weight W (kN)</label><input id="s-W" type="number" value="5080" min="1" step="10">
+          <p class="hint">Metric C<sub>t</sub> values of ASCE 7-22 Table 12.8-2. The drift and detailing checks are in Pondus, not here.</p>
+        </div>
+        <div>
+          <svg id="spec-plot" class="plot" role="img" aria-label="Design response spectrum"></svg>
+          <div class="results" id="spec-results"></div>
+          <p class="formula" id="spec-note"></p>
+        </div>
+      </div>
+
+      <!-- Modes -->
+      <div class="panel" id="panel-modes">
+        <div class="controls">
+          <label for="m-n">Storeys: <output id="m-n-out">5</output></label><input id="m-n" type="range" value="5" min="2" max="14" step="1" oninput="document.getElementById('m-n-out').value=this.value">
+          <div class="row">
+            <div><label for="m-m">Storey mass (t)</label><input id="m-m" type="number" value="300" min="10" step="10"></div>
+            <div><label for="m-k">Storey stiffness (kN/mm)</label><input id="m-k" type="number" value="120" min="1" step="5"></div>
+          </div>
+          <div class="row">
+            <div><label for="m-h">Storey height (m)</label><input id="m-h" type="number" value="3.5" min="2" max="6" step="0.1"></div>
+            <div><label for="m-taper">Taper to the top: <output id="m-taper-out">0.3</output></label><input id="m-taper" type="range" value="0.3" min="0" max="0.8" step="0.05" oninput="document.getElementById('m-taper-out').value=this.value"></div>
+          </div>
+          <label for="m-mode">Animate mode: <output id="m-mode-out">1</output></label><input id="m-mode" type="range" value="1" min="1" max="5" step="1" oninput="document.getElementById('m-mode-out').value=this.value">
+          <p class="hint">A shear building: lumped masses, storey springs, K φ = ω² M φ solved by Jacobi rotations. Pondus solves the full 3D model by Lanczos and keeps adding modes until 90 % of the mass takes part.</p>
+        </div>
+        <div>
+          <svg id="mode-plot" class="plot" role="img" aria-label="Mode shapes of a shear building"></svg>
+          <div class="table-wrap" style="margin-top:14px">
+            <table id="mode-table"><thead><tr><th>Mode</th><th class="num">T (s)</th><th class="num">f (Hz)</th><th class="num">Mass taking part</th><th class="num">Cumulative</th></tr></thead><tbody></tbody></table>
+          </div>
+          <p class="formula" id="mode-note"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= BURJ KHALIFA ======================== -->
+<section id="example" style="background: var(--surface-2);">
+  <div class="wrap">
+    <div class="split reveal">
+      <div>
+        <span class="eyebrow">Example</span>
+        <h2>A simplified Burj Khalifa, built by an agent</h2>
+        <p>The model has 84 walls, 2,286 frame members and rigid diaphragms at 78 levels, up to the top of the concrete at 586 m, and was built through the MCP server by a script as an agent would build it. The static analysis and a 60-mode response spectrum take about a minute on a 16-core computer, and Windows and Linux machines with an NVIDIA GPU factorise the large stiffness matrices on the card with the same answers.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Model</th><th class="num">T1 (s)</th><th class="num">T2 (s)</th></tr></thead>
+            <tbody>
+              <tr><td>Fixed base, gross sections</td><td class="num">6.93</td><td class="num">6.23</td></tr>
+              <tr><td>Fixed base, 0.70 Ig (ACI 318-19 6.6.3.1.1)</td><td class="num">8.24</td><td class="num">7.42</td></tr>
+              <tr><td>Piled raft as springs</td><td class="num">7.04</td><td class="num">6.35</td></tr>
+              <tr><td>SOM's analysis (Baker, Korista and Novak 2007)</td><td class="num">11.3</td><td class="num">10.2</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted" style="margin-top:12px">The model is too stiff, 27 to 39 % below SOM's periods, because the corridor walls are solid here and coupled through link beams in the real tower, and because the core dimensions are assumed. It shows what Pondus can model, and it is not a validation.</p>
+      </div>
+      <div class="shot" data-zoom="assets/img/burj-khalifa-modes.png" data-caption="The first mode shape of the Burj Khalifa model, with the periods, mass shares, base shear and storey drifts in the Seismic table"><img loading="lazy" src="assets/img/burj-khalifa-modes.png" alt="Pondus with the first mode shape of a simplified Burj Khalifa model"></div>
+    </div>
+    <div class="strip reveal" style="margin-top:22px">
+      <figure data-zoom="assets/img/burj/model.png" data-caption="The model"><img loading="lazy" src="assets/img/burj/model.png" alt="Burj Khalifa model"><figcaption>Model</figcaption></figure>
+      <figure data-zoom="assets/img/burj/plan.png" data-caption="Plan: the buttressed core with three wings"><img loading="lazy" src="assets/img/burj/plan.png" alt="Plan"><figcaption>Plan</figcaption></figure>
+      <figure data-zoom="assets/img/burj/mode1.png" data-caption="Mode 1"><img loading="lazy" src="assets/img/burj/mode1.png" alt="Mode 1"><figcaption>Mode 1</figcaption></figure>
+      <figure data-zoom="assets/img/burj/mode2.png" data-caption="Mode 2"><img loading="lazy" src="assets/img/burj/mode2.png" alt="Mode 2"><figcaption>Mode 2</figcaption></figure>
+      <figure data-zoom="assets/img/burj/mode3.png" data-caption="Mode 3"><img loading="lazy" src="assets/img/burj/mode3.png" alt="Mode 3"><figcaption>Mode 3</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= THE AGENT ========================= -->
+<section id="agent">
+  <div class="wrap">
+    <div class="split reveal">
+      <div class="shot light"><img loading="lazy" src="assets/img/paper/architecture.png" alt="Architecture of Pondus: the engineer's window and every agent reach the same commands of pondus-core through the MCP server"></div>
+      <div>
+        <span class="eyebrow">How the agent works</span>
+        <h2>One model, one set of commands, any agent</h2>
+        <p>The built-in chat runs an agent session on a copy of the model for every message, and external agents such as Claude Desktop, Claude Code and ChatGPT reach the program through the same MCP server of 46 tools. Every tool calls the functions the ribbon uses, so a model built by the agent can be checked, edited and undone by hand.</p>
+        <p>The tools return the checks an engineer would make, such as the balance of applied loads and reactions and the share of slab load that reached the beams, so the agent is prompted to verify its own work.</p>
+        <div class="btn-row">
+          <a class="btn btn-ghost" href="manual.html#chat">Use the agent in the chat</a>
+          <a class="btn btn-ghost" href="manual.html#mcp">Connect it with MCP</a>
+        </div>
+      </div>
+    </div>
+    <div class="split reveal" style="margin-top:56px">
+      <div>
+        <h3>Two recorded agent runs</h3>
+        <p>In the paper, a two-storey concrete frame took 13 tool calls and 105 s, and a five-storey wall-frame building with an earthquake analysis and a calculation report took 22 tool calls and 382 s. The agent's answers were audited against the program and hand checks: every number was right, but four descriptions were wrong, which is why the model, the tables and the report stay open for the engineer.</p>
+      </div>
+      <div class="shot light"><img loading="lazy" src="assets/img/paper/timeline.png" alt="Timeline of the two recorded agent runs: build, settings, check and analyse, design, look and report"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= VERIFICATION ======================== -->
+<section id="verification" style="background: var(--surface-2);">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Verification</span>
+      <h2>Checked against published results</h2>
+      <p class="lede">Every comparison goes through Pondus's own model, analysis wrapper and design code, and every reference, page and fix is listed in the calibration notes of the repository.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card reveal">
+        <h3>470 published benchmarks</h3>
+        <p>Textbooks, the ANSYS Verification Manual, the AISC Design Examples, SCI, JRC and StructurePoint examples, Clough and Penzien, Heidebrecht and Stafford Smith, and the FHWA bridge example. 430 agree within 0.5 % and 449 within 1 %. Fourteen defects were found and fixed, six of them unconservative.</p>
+        <a href="https://github.com/Sompote/pondus/blob/main/paper/paper.pdf" target="_blank" rel="noopener">Calibration report (PDF) →</a>
+      </div>
+      <div class="card reveal">
+        <h3>199 SAP2000 and ETABS problems</h3>
+        <p>28 problems of CSI's verification manuals rebuilt in Pondus: statics, releases, temperature, settlements, P-Delta, buckling, staged construction, modal and response spectrum, shear walls and the ACI, AISC and Eurocode design examples. 177 agree within 0.5 %. Eight defects were found, among them a Eurocode 3 moment resistance not reduced for high shear.</p>
+        <a href="https://github.com/Sompote/pondus/blob/main/calibration/NOTES_csi.md" target="_blank" rel="noopener">Notes →</a>
+      </div>
+      <div class="card reveal">
+        <h3>A full-scale shake-table building</h3>
+        <p>The 7-storey wall building tested on the UCSD–NEES shake table: the measured first period within 6.2 % and the second-mode frequency within 0.9 % with gross sections, and the ACI 318 effective stiffnesses bracket the periods measured after the earthquake tests.</p>
+        <a href="https://doi.org/10.5281/zenodo.23581167" target="_blank" rel="noopener">The paper on Zenodo →</a>
+      </div>
+    </div>
+    <div class="card reveal" style="margin-top:22px">
+      <h3>Cite Pondus</h3>
+      <p class="muted">S. Youwai (2026). <em>Pondus: an agentic structural analysis and design program.</em> Zenodo. DOI <a href="https://doi.org/10.5281/zenodo.23581167">10.5281/zenodo.23581167</a>.</p>
+<pre><code>@misc{youwai2026pondus,
+  author    = {Youwai, Sompote},
+  title     = {Pondus: an agentic structural analysis and design program},
+  year      = {2026},
+  publisher = {Zenodo},
+  version   = {v1},
+  doi       = {10.5281/zenodo.23581167},
+  url       = {https://doi.org/10.5281/zenodo.23581167}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= DOWNLOAD ========================== -->
+<section id="download">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Download</span>
+      <h2>Pondus 0.1.3</h2>
+      <p class="lede">Unzip and run. Everything works without an AI provider; the agent needs one (for example OpenRouter), entered under Agent › Settings.</p>
+    </div>
+    <div class="dl">
+      <div class="card reveal">
+        <h3>macOS 11 or later</h3>
+        <p class="muted">Universal build for Apple Silicon and Intel. Unzip, move <code>Pondus.app</code> to Applications, and the first time right-click it and choose <b>Open</b>.</p>
+        <a class="btn btn-primary" href="https://github.com/Sompote/pondus/releases/download/v0.1.3/Pondus-0.1.3-macos-universal.zip">⬇ Pondus-0.1.3-macos-universal.zip</a>
+      </div>
+      <div class="card reveal">
+        <h3>Windows 10 or later</h3>
+        <p class="muted">Unzip and run <code>pondus.exe</code>. If Windows warns about an unknown app, choose <b>More info › Run anyway</b>. An NVIDIA GPU with CUDA 12 and cuDSS speeds up large models.</p>
+        <a class="btn btn-primary" href="https://github.com/Sompote/pondus/releases/download/v0.1.3/Pondus-0.1.3-windows-x64.zip">⬇ Pondus-0.1.3-windows-x64.zip</a>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top:18px">All versions and the source: <a href="https://github.com/Sompote/pondus/releases">github.com/Sompote/pondus/releases</a>. Build from source with <code>cargo build --release</code>. Installation steps and the agent setup are in the <a href="manual.html">manual</a>.</p>
+    <div class="callout warn"><p>Structural results from any software must be checked by a qualified engineer before they are used for design or construction.</p></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <b>Pondus</b> · Copyright © 2026 Sompote Youwai · <a href="https://github.com/Sompote/pondus/blob/main/LICENSE">GNU AGPL-3.0-only</a><br>
+      Includes the <a href="https://github.com/lambdaclass/stabileo">Stabileo</a> engine (AGPL-3.0) and the TigrimOS agent harness (Apache-2.0); see <a href="https://github.com/Sompote/pondus/blob/main/NOTICE.md">NOTICE.md</a>.
+    </div>
+    <div>
+      <a href="https://github.com/Sompote/pondus">Source</a> · <a href="https://doi.org/10.5281/zenodo.23581167">Paper</a> · <a href="manual.html">Manual</a> · <a href="manual.html#mcp">MCP</a> · <a href="https://github.com/Sompote/pondus/issues">Issues</a><br>
+      AI Research Group, King Mongkut's University of Technology Thonburi.
+    </div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Enlarged picture"><button aria-label="Close">×</button><figure style="margin:0"><img alt=""><figcaption></figcaption></figure></div>
+<script src="assets/site.js"></script>
+</body>
+</html>

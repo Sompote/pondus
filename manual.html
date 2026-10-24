@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pondus manual · Install, use the agent, connect with MCP</title>
+<meta name="description" content="How to install Pondus on macOS and Windows, how to ask its built-in agent to build, analyse and design a structure, and how to connect Pondus to Claude Desktop, Claude Code and ChatGPT through MCP.">
+<link rel="icon" type="image/png" href="assets/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="index.html" aria-label="Pondus home">
+      <img class="logo-light" src="assets/img/logo.png" alt="Pondus">
+      <img class="logo-dark" src="assets/img/logo-dark.png" alt="Pondus">
+    </a>
+    <button class="nav-toggle" aria-label="Menu">☰</button>
+    <nav class="nav-links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#lab">Try the analysis</a>
+      <a class="active" href="manual.html">Manual</a>
+      <a href="#mcp">MCP</a>
+      <a href="https://github.com/Sompote/pondus" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-primary btn-sm" href="index.html#download">Download</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap manual">
+  <aside class="toc" aria-label="Contents">
+    <a href="#install">1. Install</a>
+    <a class="sub" href="#install-mac">macOS</a>
+    <a class="sub" href="#install-win">Windows</a>
+    <a class="sub" href="#install-src">From source</a>
+    <a href="#window">2. The window</a>
+    <a href="#chat">3. The agent in the chat</a>
+    <a class="sub" href="#chat-settings">Settings</a>
+    <a class="sub" href="#chat-ask">What to ask</a>
+    <a class="sub" href="#chat-check">Checking its work</a>
+    <a href="#hand">4. Drawing by hand</a>
+    <a href="#mcp">5. Connect with MCP</a>
+    <a class="sub" href="#mcp-claude">Claude Desktop</a>
+    <a class="sub" href="#mcp-code">Claude Code</a>
+    <a class="sub" href="#mcp-chatgpt">ChatGPT</a>
+    <a class="sub" href="#mcp-other">Other agents</a>
+    <a class="sub" href="#mcp-check">Check the connection</a>
+    <a class="sub" href="#mcp-tools">The 46 tools</a>
+    <a href="#files">6. Files and exchange</a>
+    <a href="#limits">7. Limits and safety</a>
+  </aside>
+
+  <main class="doc">
+    <span class="eyebrow">Short manual · Pondus 0.1.3</span>
+    <h1>Install, use the agent, connect with MCP</h1>
+    <p class="lede">This page gets you from the download to a designed building in a few minutes, first with the agent in Pondus's own chat, then with Claude Desktop, Claude Code or ChatGPT driving Pondus through its MCP server. The full technical description is in the <a href="https://github.com/Sompote/pondus#readme">README</a> and the <a href="https://doi.org/10.5281/zenodo.23581167">paper</a>.</p>
+
+    <!-- =============================== 1 INSTALL =============================== -->
+    <h2 id="install">1. Install</h2>
+    <p>Pondus is one program with no installer. Download the zip for your computer from the <a href="https://github.com/Sompote/pondus/releases/latest">releases page</a>, unzip it, and run it. Everything except the agent works offline and without an account.</p>
+
+    <h3 id="install-mac">macOS 11 or later (Apple Silicon and Intel)</h3>
+    <ol class="steps">
+      <li>Download <a href="https://github.com/Sompote/pondus/releases/download/v0.1.3/Pondus-0.1.3-macos-universal.zip"><code>Pondus-0.1.3-macos-universal.zip</code></a> and unzip it.</li>
+      <li>Move <code>Pondus.app</code> to your Applications folder.</li>
+      <li>The first time, <b>right-click the app and choose Open</b>, then Open again in the dialog. The app is not notarised, so a plain double-click is refused once by Gatekeeper.</li>
+    </ol>
+    <p>The program inside the bundle, which the MCP setup below needs, is <code>/Applications/Pondus.app/Contents/MacOS/pondus</code>.</p>
+
+    <h3 id="install-win">Windows 10 or later</h3>
+    <ol class="steps">
+      <li>Download <a href="https://github.com/Sompote/pondus/releases/download/v0.1.3/Pondus-0.1.3-windows-x64.zip"><code>Pondus-0.1.3-windows-x64.zip</code></a> and unzip it to a folder you will keep, for example <code>C:\Pondus</code>.</li>
+      <li>Run <code>pondus.exe</code>. If SmartScreen warns about an unknown app, choose <b>More info › Run anyway</b>.</li>
+      <li>Optional, for large models: an NVIDIA GPU with the CUDA 12 runtime and cuDSS 0.8 or later (<code>pip install nvidia-cudss-cu12</code>, with the library folders on <code>PATH</code>) factorises big stiffness matrices on the card. <code>pondus --gpu</code> reports whether it is used.</li>
+    </ol>
+
+    <h3 id="install-src">Build from source (macOS, Windows, Linux)</h3>
+    <p>The workspace is self-contained, because the Stabileo engine and the TigrimOS agent harness are vendored inside it, so one command builds everything with a Rust toolchain.</p>
+<pre><code>git clone https://github.com/Sompote/pondus.git
+cd pondus
+cargo build --release          # target/release/pondus and target/release/tigrim (about 12 min cold)
+target/release/pondus          # the app
+target/release/pondus --mcp    # the MCP server (see section 5)
+target/release/pondus --about  # licence notice and source link</code></pre>
+
+    <!-- =============================== 2 WINDOW =============================== -->
+    <h2 id="window">2. The window in one minute</h2>
+    <img class="shot" src="assets/img/features/draw-by-hand.png" alt="The Pondus window: ribbon, palette, 3D view, tables and the agent panel" data-zoom="assets/img/features/draw-by-hand.png" data-caption="Ribbon at the top, palette on the left, model browser, 3D view, tables below, and the Agent and Properties panel on the right">
+    <ul>
+      <li><b>Ribbon</b> (top): View, Draw, Modify, Properties, Conditions, Analyse, Slab, Dynamics and stability, Advanced and Report groups. <b>Analyse</b> runs the analysis, <b>Design</b> designs every member and slab, and the two ticks beside it let the design <b>resize</b> failing concrete and <b>select</b> the lightest steel shapes.</li>
+      <li><b>Palette</b> (left): the same drawing tools as the ribbon, which you can also drag onto the model.</li>
+      <li><b>Model browser</b> (left): columns, beams, walls, slabs, sections, and the load cases and combinations. Click an item to select it and see it in Properties.</li>
+      <li><b>Tables</b> (bottom): nodes, members, supports, loads, sections, slabs, the Seismic, Buckling and Design results, reactions and messages. Failing design rows are red.</li>
+      <li><b>Agent and Properties</b> (right): the chat with the agent, and the properties of whatever is selected, including a member's forces and its full code check after design.</li>
+      <li><b>Status line</b> (very bottom): the last analysis with its element count, time and whether the reactions balance the applied loads.</li>
+    </ul>
+    <p>A good first run without the agent: <b>Frame</b> in the Draw group, accept the default spans and storeys, then <b>Analyse</b>, then <b>Design</b>, and look at the Design table and the colours in the view. <b>PDF report</b> in the Report group writes the calculation report next to the model file.</p>
+
+    <!-- =============================== 3 CHAT =============================== -->
+    <h2 id="chat">3. The agent in the chat</h2>
+    <p>The Agent panel on the right runs a language-model agent on a copy of your model. For every message it plans the steps, calls Pondus's tools (the same commands the ribbon uses), and the views show its model as it saves it. When it is done, the result is your model, and one <b>Undo</b> takes back the whole run.</p>
+
+    <h3 id="chat-settings">Settings: connect an AI provider</h3>
+    <p>The agent needs an OpenAI-compatible provider. OpenRouter is the default because one key reaches many models, but any endpoint of the same API works. Click <b>Settings</b> at the top of the Agent panel and fill in:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>What to enter</th></tr></thead>
+        <tbody>
+          <tr><td><b>API URL</b></td><td>The provider's base address, for example <code>https://openrouter.ai/api/v1</code>.</td></tr>
+          <tr><td><b>Model</b></td><td>The model name as the provider spells it, for example <code>anthropic/claude-sonnet-5</code> on OpenRouter. A stronger model plans better and describes its results more carefully; the paper's runs used a small, fast model and still got every number right.</td></tr>
+          <tr><td><b>Images</b></td><td><b>Auto</b> asks OpenRouter whether the model takes pictures; set <b>Yes</b> or <b>No</b> for other providers. With a vision model you can attach a sketch or a plan and ask the agent to build it.</td></tr>
+          <tr><td><b>API key</b></td><td>The provider's key. It is stored on your computer only (<code>~/Library/Application Support/Pondus/tigrimos_api_key</code> on macOS) and sent only to the API URL above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px">Press <b>Save</b>. If a message fails with "no LLM key" or "cannot reach", check the key and the URL first. When Pondus is built from source, the agent runner <code>tigrim</code> is found next to the <code>pondus</code> binary, and Settings has a field for its path if it is elsewhere.</p>
+
+    <h3 id="chat-ask">What to ask</h3>
+    <p>Write the request the way you would brief a junior engineer: geometry, storeys, sections or materials, loads and the code. The more of these you give, the less the agent assumes. Four starters are offered in the empty chat:</p>
+    <ul>
+      <li><em>Build a 3-storey concrete frame, 3 bays of 6 m by 2 bays of 5 m, storeys 3.5 m, 150 mm slabs, office live load, and design the beams and slabs.</em></li>
+      <li><em>Design a steel portal: span 12 m, eaves 6 m, frames at 6 m, roof dead 0.5 kPa and live 0.5 kPa, choose the lightest H shapes.</em></li>
+      <li><em>Check every beam for deflection and tell me which ones govern by deflection.</em></li>
+      <li><em>Import the Aedifex structural model and design it, then export the design for BIM.</em></li>
+    </ul>
+    <p>Requests that use the rest of the program read the same way:</p>
+    <ul>
+      <li><em>Design a pile cap: 9 piles at 1.2 m spacing, 0.7 m thick, a column load of 100 t at the centre; give me the pile loads, the bars of both faces and the punching check.</em></li>
+      <li><em>Add a 6 m shear wall on grid line A from the ground to the roof, then analyse the building under ASCE 7 earthquake with SDS 0.5 and SD1 0.3, R = 5, and check the storey drifts.</em></li>
+      <li><em>Mesh the slabs as plates with 0.5 m elements, design them again and tell me how the bottom bars changed.</em></li>
+      <li><em>Run a pushover in x with a triangular pattern and report the collapse load factor and the first hinges.</em></li>
+      <li><em>Run an HL-93 truck along the two-span girder and design it for the envelope.</em></li>
+      <li><em>Switch the steel code to Eurocode 3 and redesign the columns.</em></li>
+      <li><em>Write the calculation report with the full calculation of every beam.</em></li>
+    </ul>
+    <div class="callout"><p><b>Foundations.</b> A pile cap or a mat is a plate resting on its piles or on the soil, with no beams: the agent uses <code>add_mat</code> (piles as a grid or as points, the pile's axial stiffness, or a Winkler subgrade modulus for a raft), puts the column loads on the mat, and reads the pile loads from the reactions. Give the pile stiffness when you know it, because a pinned pile right under a column load takes all of it and the cap does not bend. The design gives the bars of both faces and the punching check at every pile and column. By hand: Node tool for the pile points, a support on each, the Slab tool over them, the plate slab method in the settings, and the slab's Properties for the foundation flag, the subgrade and the pile width.</p></div>
+    <div class="callout"><p><b>Tip.</b> You can mix the agent and your hand freely. Draw the grid yourself, ask the agent to load and design it, then move a column by hand and press Analyse again. The agent sees the model as it is when you send the next message.</p></div>
+
+    <h3 id="chat-check">Checking its work</h3>
+    <p>The agent returns numbers from the program, and the paper's audit found every number right but four descriptions wrong, so read its summary as a pointer and check the model itself:</p>
+    <ul>
+      <li>The <b>status line</b> after each analysis says whether the reactions balance the applied loads and how much slab load reached the beams against the slab total.</li>
+      <li>The <b>Design table</b> lists every member's ratio, what governs and the bars or shape chosen, and the view colours members green below 0.7, yellow below 0.9, orange below 1.0 and red when they fail.</li>
+      <li>Click a member for its <b>forces and full code check</b> in Properties; the <b>Seismic</b> table shows the periods, mass shares, base shear and drifts.</li>
+      <li>The <b>calculation report</b> repeats everything on paper, with failing rows in red and the changes and warnings at the end.</li>
+      <li><b>Undo</b> takes back a whole agent run if you do not like it.</li>
+    </ul>
+
+    <!-- =============================== 4 HAND =============================== -->
+    <h2 id="hand">4. Drawing by hand</h2>
+    <p>The ribbon's Draw group and the palette hold Node, Beam, Column, Brace, Member, Bay and Slab, the fixed, pinned and roller supports, Load, Hinge and Delete. A click arms a tool, and an item dragged from the palette onto the model is placed where it is dropped.</p>
+    <ul>
+      <li>With a drawing tool armed, a <b>left drag draws</b> instead of orbiting. <span class="kbd">Shift</span>-drag pans and right-drag orbits.</li>
+      <li>A <b>beam, brace or member</b> is dragged from its start to its end, or clicked at both ends. A <b>bay</b> is dragged as a rectangle on a floor and gets four edge beams, a slab and, if chosen, columns under its corners. A <b>column</b> is placed with a click, or one at each corner of a dragged rectangle.</li>
+      <li>Points <b>snap</b> to the grid (0.5 m by default) and to nodes, on the work plane: the floor chosen in Plan, the frame line in Elevation, or the plane height in 3D.</li>
+      <li>With Select, dragging a node <b>moves</b> it and dropping it on another node <b>merges</b> them; dragging a member moves it and <span class="kbd">Ctrl</span>/<span class="kbd">Cmd</span>-drag <b>copies</b> it. The Modify group moves, copies as arrays, rotates, mirrors, splits and merges members with their loads, supports and slabs.</li>
+      <li>Every change is one undo step, and the agent sees the same model.</li>
+    </ul>
+
+    <!-- =============================== 5 MCP =============================== -->
+    <h2 id="mcp">5. Connect Pondus with MCP</h2>
+    <p>Pondus runs as a Model Context Protocol server with <code>pondus --mcp</code>, speaking MCP over standard input and output (protocol version 2025-06-18). Any agent that speaks MCP can then build, analyse and design structures with its 46 tools. Claude Desktop and Claude Code start it directly from a few lines of configuration, ChatGPT reaches it through an HTTP bridge and a tunnel, and with <code>--autosave</code> every change is written to a <code>.pondus</code> file that you open in the app to check the work.</p>
+<pre><code>pondus --mcp [--open model.pondus] [--autosave model.pondus]</code></pre>
+    <ul>
+      <li><code>--open</code> starts the server with an existing model (a <code>.pondus</code> file, or a Stabileo or Aedifex JSON model).</li>
+      <li><code>--autosave</code> saves the model after every change. Relative paths the agent gives to <code>write_report</code>, <code>export_file</code> or <code>export_bim</code> are written next to this file, and the pictures of <code>show_picture</code> go to a <code>.pictures</code> folder beside it.</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Where Pondus is</th><th>Program path to use below</th></tr></thead>
+        <tbody>
+          <tr><td>macOS release app</td><td><code>/Applications/Pondus.app/Contents/MacOS/pondus</code></td></tr>
+          <tr><td>Windows release zip</td><td>the folder you unzipped to, for example <code>C:\Pondus\pondus.exe</code></td></tr>
+          <tr><td>Built from source</td><td><code>target/release/pondus</code> in the repository</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="mcp-claude">Claude Desktop</h3>
+    <p>Claude Desktop starts local MCP servers itself over stdio, so Pondus connects to it directly.</p>
+    <ol class="steps">
+      <li>Install Pondus and make a folder for the model, for example <code>~/Pondus</code> on macOS or <code>C:\Pondus</code> on Windows.</li>
+      <li>In Claude Desktop open <b>Settings › Developer › Edit Config</b>. This opens <code>claude_desktop_config.json</code>, which lives in <code>~/Library/Application Support/Claude/</code> on macOS and in <code>%APPDATA%\Claude\</code> on Windows.</li>
+      <li>Add Pondus under <code>mcpServers</code>. If the file already has other servers, add the <code>"pondus"</code> entry beside them inside the same object.
+        <div class="os-tabs" data-group="claude" style="margin-top:10px"><button class="active" data-os="mac">macOS</button><button data-os="win">Windows</button></div>
+        <div class="os-panel active" data-group="claude" data-os="mac">
+<pre><code>{
+  "mcpServers": {
+    "pondus": {
+      "command": "/Applications/Pondus.app/Contents/MacOS/pondus",
+      "args": ["--mcp", "--autosave", "/Users/you/Pondus/model.pondus"]
+    }
+  }
+}</code></pre></div>
+        <div class="os-panel" data-group="claude" data-os="win">
+<pre><code>{
+  "mcpServers": {
+    "pondus": {
+      "command": "C:\\Pondus\\pondus.exe",
+      "args": ["--mcp", "--autosave", "C:\\Pondus\\model.pondus"]
+    }
+  }
+}</code></pre><p class="small muted">On Windows the backslashes of the paths are written twice.</p></div>
+      </li>
+      <li><b>Quit Claude Desktop completely and start it again.</b> Pondus's tools then appear under the tools button of the message box, and Settings › Developer shows the server as running. If it shows an error, check the path to the program first.</li>
+      <li>Ask for a structure, for example: <em>"Use Pondus to build a 5-storey concrete frame, 3 bays of 6 m by 2 bays of 5 m, with a 6 m shear wall on grid line A, analyse it under ASCE 7 earthquake with SDS 0.5 and SD1 0.3, design it, and write the calculation report."</em> Claude calls the Pondus tools, shows the pictures that <code>show_picture</code> returns, and writes the report next to <code>model.pondus</code>.</li>
+      <li>Open <code>model.pondus</code> in the Pondus app (File › Open) to check the model, the diagrams and the design tables, or to carry on by hand.</li>
+    </ol>
+
+    <h3 id="mcp-code">Claude Code</h3>
+    <p>The same server is added to Claude Code with one command in a terminal, after which the tools are available in every Claude Code session of that scope:</p>
+<pre><code>claude mcp add pondus -- /Applications/Pondus.app/Contents/MacOS/pondus --mcp --autosave ~/Pondus/model.pondus</code></pre>
+    <p>Add <code>--scope user</code> before <code>pondus</code> to make it available in every project, and check it with <code>claude mcp list</code>. On Windows give the path to <code>pondus.exe</code> instead.</p>
+
+    <h3 id="mcp-chatgpt">ChatGPT</h3>
+    <p>ChatGPT connects only to remote MCP servers that it reaches over HTTPS and cannot start a program on your computer. Pondus's stdio server therefore needs two helpers in front of it: a bridge that serves it over HTTP, and a tunnel that gives that server a public HTTPS address. The steps use <a href="https://github.com/supercorp-ai/supergateway">supergateway</a> and a <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/">Cloudflare quick tunnel</a>; <code>mcp-proxy</code> or ngrok work the same way. These are third-party tools whose options change, so check their documentation if a command differs.</p>
+    <ol class="steps">
+      <li>Serve Pondus over HTTP on your computer (Node.js is needed for <code>npx</code>):
+<pre><code>npx -y supergateway \
+  --stdio "/Applications/Pondus.app/Contents/MacOS/pondus --mcp --autosave $HOME/Pondus/model.pondus" \
+  --outputTransport streamableHttp --port 8000</code></pre>
+        The server then answers at <code>http://localhost:8000/mcp</code>.</li>
+      <li>In a second terminal, give it a public HTTPS address:
+<pre><code>cloudflared tunnel --url http://localhost:8000</code></pre>
+        cloudflared prints an address such as <code>https://example-words.trycloudflare.com</code>. The MCP endpoint is that address followed by <code>/mcp</code>.</li>
+      <li>In ChatGPT, turn on developer mode for connectors (in recent versions <b>Settings › Apps &amp; Connectors › Advanced settings › Developer mode</b>; the menu names have changed between versions and the feature depends on the plan). Create a new connector named Pondus with the endpoint URL from step 2, no authentication, and save it.</li>
+      <li>In a new chat, enable the Pondus connector and ask for the structure as above. ChatGPT asks you to confirm actions that change the model.</li>
+      <li>Open <code>~/Pondus/model.pondus</code> in the Pondus app to check the work.</li>
+    </ol>
+    <div class="callout warn"><p><b>Security.</b> While the tunnel runs, anyone who has the URL can drive Pondus on your computer and read or overwrite the model and the files written next to it. Use a fresh folder for the model, keep the URL private, and stop the tunnel (<span class="kbd">Ctrl</span>-C) when you are done. For lasting use, run the bridge on a server with authentication rather than through a quick tunnel.</p></div>
+    <div class="callout"><p><b>Licence.</b> If you let other people use Pondus over a network in this way, AGPL-3.0 section 13 asks you to offer them the source code of the version they use. The server announces its licence and source link in its <code>serverInfo</code>, and its instructions tell the agent to give the link when asked. If you have modified Pondus, publish your modified source and point to it.</p></div>
+
+    <h3 id="mcp-other">Other agents</h3>
+    <p>Any MCP client that can start a stdio server, such as the agents of Cursor, VS Code, Zed, LM Studio, TigrimOS or Aedifex, uses the same command, <code>pondus --mcp</code>, with the arguments above. Clients that only speak HTTP use the bridge described for ChatGPT, without the tunnel when they run on the same computer (<code>http://localhost:8000/mcp</code>).</p>
+
+    <h3 id="mcp-check">Check the connection</h3>
+    <p>Pondus answers a plain MCP handshake from a terminal, which is a quick test that the path and the program are right. The reply names the server (<code>"name":"pondus"</code>) with its version, licence and source link.</p>
+<pre><code>printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' \
+  | /Applications/Pondus.app/Contents/MacOS/pondus --mcp</code></pre>
+
+    <h3 id="mcp-tools">The 46 tools</h3>
+    <p>Every operation of the program is a tool, and the server's instructions tell the agent how to model, check and report. The 25 model commands are the same functions the ribbon calls, and the 21 analysis, design and exchange tools wrap the engine and the writers.</p>
+    <div class="tool-groups">
+      <div><h4>Model</h4><code>new_model</code><code>get_model</code><code>add_frame</code><code>add_mat</code><code>add_members</code><code>set_members</code><code>add_walls</code><code>set_walls</code><code>add_slabs</code><code>add_supports</code><code>add_masses</code><code>set_diaphragms</code><code>delete</code><code>check_model</code></div>
+      <div><h4>Materials, sections, loads</h4><code>add_material</code><code>set_material</code><code>list_sections</code><code>add_load_case</code><code>add_combination</code><code>add_loads</code><code>set_design</code></div>
+      <div><h4>Editing</h4><code>move_node</code><code>transform</code><code>split_member</code><code>merge_members</code></div>
+      <div><h4>Analysis and design</h4><code>analyze</code><code>get_results</code><code>get_slab_results</code><code>design</code><code>set_seismic</code><code>get_seismic</code><code>buckling</code><code>time_history</code><code>section_analysis</code></div>
+      <div><h4>Advanced analyses</h4><code>pushover</code><code>set_moving</code><code>influence_line</code><code>set_stages</code><code>staged</code></div>
+      <div><h4>Pictures, report, exchange</h4><code>show_picture</code><code>write_report</code><code>export_file</code><code>import_file</code><code>import_stabileo</code><code>export_stabileo</code><code>export_bim</code></div>
+    </div>
+    <p class="small muted" style="margin-top:12px">Units are metres, kilonewtons and megapascals. Concrete sections are named <code>'300 x 600'</code> (mm) and steel sections by their JIS name from <code>list_sections</code>, for example <code>'H 300x150x6.5x9'</code>.</p>
+
+    <!-- =============================== 6 FILES =============================== -->
+    <h2 id="files">6. Files and exchange</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Format</th><th>Direction</th><th>What it carries</th></tr></thead>
+        <tbody>
+          <tr><td><code>.pondus</code></td><td>open and save</td><td>The whole model with its results and design; what <code>--autosave</code> writes.</td></tr>
+          <tr><td>PDF report</td><td>write</td><td>Summary, basis of design, materials, sections, supports, each load case with its reaction balance, combinations, analysis extremes with figures, earthquake tables, every design table and the full calculation of the governing members.</td></tr>
+          <tr><td>Excel</td><td>both</td><td>An exact round trip of the model, with result and design sheets.</td></tr>
+          <tr><td>DXF R12 (AutoCAD)</td><td>both</td><td>Members on layers by kind and section, read back by layer name. Geometry and sections only.</td></tr>
+          <tr><td>IFC4 (Revit, BIM)</td><td>both</td><td>IfcColumn, IfcBeam, IfcMember, IfcSlab and IfcWall with extruded profiles and the design ratio; IFC2x3 and IFC4 from Revit or Aedifex are read.</td></tr>
+          <tr><td>Stabileo and Aedifex JSON</td><td>both</td><td>Stabileo's fixture JSON, which Aedifex also writes; <code>export_bim</code> returns the design per element for the Aedifex agent to apply.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px">DXF and IFC carry geometry and sections only, so supports and loads are added after an import.</p>
+
+    <!-- =============================== 7 LIMITS =============================== -->
+    <h2 id="limits">7. Limits and safety</h2>
+    <ul>
+      <li>Column design assumes braced frames unless P-Delta is on. Punching at flat-slab columns, combined and mat footings, and footings under earthquake are not designed.</li>
+      <li>There is no wind load generator; W cases are added by hand. Earthquake loads are generated.</li>
+      <li>Concrete beams are rectangular (T-beam action ignored, conservative in sagging). Steel is H shapes and cold-formed lipped channels; hollow sections are analysed but not designed.</li>
+      <li>The pushover uses rigid-plastic hinges without P–M interaction, so treat a building's pushover as indicative.</li>
+      <li>The seismic analysis leaves out accidental torsion, the 100 %/30 % orthogonal combination and the special detailing of seismic frames.</li>
+    </ul>
+    <div class="callout warn"><p>Structural results produced by Pondus, through its own chat or through an external agent, are produced by software and must be checked by a qualified engineer before they are used for design or construction.</p></div>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <b>Pondus</b> · Copyright © 2026 Sompote Youwai · <a href="https://github.com/Sompote/pondus/blob/main/LICENSE">GNU AGPL-3.0-only</a><br>
+      Includes the <a href="https://github.com/lambdaclass/stabileo">Stabileo</a> engine (AGPL-3.0); see <a href="https://github.com/Sompote/pondus/blob/main/NOTICE.md">NOTICE.md</a>.
+    </div>
+    <div>
+      <a href="https://github.com/Sompote/pondus">Source</a> · <a href="https://doi.org/10.5281/zenodo.23581167">Paper</a> · <a href="index.html">Home</a> · <a href="https://github.com/Sompote/pondus/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Enlarged picture"><button aria-label="Close">×</button><figure style="margin:0"><img alt=""><figcaption></figcaption></figure></div>
+<script src="assets/site.js"></script>
+</body>
+</html>
