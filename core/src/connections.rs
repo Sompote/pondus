@@ -90,7 +90,7 @@ pub fn shear_tab(member: Id, end: &str, vu: f64, beam: (f64, f64, f64, f64, f64)
         // plate shear: gross yielding φ 1.0 x 0.6 Fy Agv, net rupture φ 0.75 x 0.6 Fu Anv
         let agv = depth / 1000.0 * cs.plate_t / 1000.0;
         let anv = (depth - n as f64 * (cs.bolt_d + 2.0)) / 1000.0 * cs.plate_t / 1000.0;
-        let plate = (vu * 1e3 / (1.0 * 0.6 * cs.plate_fy * 1e6 * agv)).max(vu * 1e3 / (0.75 * 0.6 * cs.plate_fu * 1e6 * anv));
+        let plate = (vu * 1e3 / (crate::codes::phi().conn_shear_yield * 0.6 * cs.plate_fy * 1e6 * agv)).max(vu * 1e3 / (0.75 * 0.6 * cs.plate_fu * 1e6 * anv));
         // the welds: two fillets down the plate's height, V and M = V e
         let h = depth / 1000.0;
         let seg = |x: f64| WeldSegment { x1: x, y1: -h / 2.0, x2: x, y2: h / 2.0, size: cs.weld / 1000.0, end_loaded: Some(false) };

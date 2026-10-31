@@ -162,7 +162,7 @@ pub fn capacities(p: &Props, h: HDims, fy: f64, fu: f64, length: f64, lb: f64, k
     // shear G2.1: web for major-axis shear (Vz), flanges for minor (Vy, G6)
     let aw = h.d * h.tw;
     let (phi_v, cv1) = if lw <= 2.24 * ef {
-        (1.0, 1.0)
+        (crate::codes::phi().steel_shear.unwrap_or(1.0), 1.0)
     } else {
         let kv = 5.34;
         (0.9, if lw <= 1.10 * (kv * E / fy).sqrt() { 1.0 } else { 1.10 * (kv * E / fy).sqrt() / lw })

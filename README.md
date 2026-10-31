@@ -26,6 +26,7 @@ Ask an AI agent to build, analyse and design a building, then check every number
 - **Or draw it yourself.** Beams, columns, bays, slabs, walls, supports and loads are drawn and edited with the mouse, and you can switch between the agent and your own hand at any time.
 - **Analysis:** 3D frames with slabs, shear walls, earthquake (response spectrum with CQC or SRSS, storey masses at the centre of mass), P-Delta and buckling, pushover, moving loads for bridges, construction stages and time history, with optional shear deformation of the members as in SAP2000 and ETABS.
 - **Design:** reinforced concrete beams, slabs, columns, walls and footings to **ACI 318-19**, and steel to **AISC 360-16** or **Eurocode 3**, with the bars and sizes chosen for you.
+- **Thai regulation:** the load factors and strength reduction factors can follow the **Thai Ministerial Regulation on structural design B.E. 2566** (กฎกระทรวง กำหนดการออกแบบโครงสร้างอาคาร พ.ศ. 2566, which replaced Regulation No. 6 of B.E. 2527), with or without specified quality control. The design then uses U = 1.4D + 1.7L, 0.75(1.4D + 1.7L) + 1.6W or ± 1.0E and 0.9D + 1.6W or ± 1.0E, and φ of 0.90 / 0.70 / 0.85 for flexure, tied columns and shear (0.75 / 0.60 / 0.70 without quality control). Choose it in the settings window or with `set_design` `standard`, and use `code_combinations` to rebuild the model's combinations.
 - **Report:** a complete calculation report as a PDF, ready to check and submit.
 - **Exchange:** Excel, DXF (AutoCAD) and IFC (Revit and BIM).
 - **Fast on large models:** a 156-storey tower with 41,000 elements and 60 earthquake modes analyses in about a minute on a 16-core computer, and Windows and Linux machines with an NVIDIA GPU factorise the large stiffness matrices on the card, with the same answers.
@@ -107,8 +108,8 @@ One click writes the PDF: basis of design, loads and their balance, diagrams, ev
 
 | Computer | Download |
 |---|---|
-| macOS 11 or later (Apple Silicon and Intel) | [Pondus-0.1.4-macos-universal.zip](https://github.com/Sompote/pondus/releases/download/v0.1.4/Pondus-0.1.4-macos-universal.zip) |
-| Windows 10 or later | [Pondus-0.1.4-windows-x64.zip](https://github.com/Sompote/pondus/releases/download/v0.1.4/Pondus-0.1.4-windows-x64.zip) |
+| macOS 11 or later (Apple Silicon and Intel) | [Pondus-0.1.5-macos-universal.zip](https://github.com/Sompote/pondus/releases/download/v0.1.5/Pondus-0.1.5-macos-universal.zip) |
+| Windows 10 or later | [Pondus-0.1.5-windows-x64.zip](https://github.com/Sompote/pondus/releases/download/v0.1.5/Pondus-0.1.5-windows-x64.zip) |
 
 - **macOS:** unzip, move `Pondus.app` to Applications, and the first time right-click it and choose **Open**.
 - **Windows:** unzip and run `pondus.exe`. If Windows warns about an unknown app, choose **More info › Run anyway**.

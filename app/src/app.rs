@@ -701,7 +701,7 @@ impl App {
             ui.label(RichText::new(format!("Slab {}", s.name)).font(theme::medium_font(14.0)));
             let mut h = s.h * 1000.0;
             let (mut dead, mut live) = (s.dead, s.live);
-            let (mut subgrade, mut mat, mut support_size) = (s.subgrade, s.mat, s.support_size);
+            let (mut subgrade, mut mat, mut support_size, mut plate) = (s.subgrade, s.mat, s.support_size, s.plate);
             let mut changed = false;
             egui::Grid::new("slab-props").num_columns(2).show(ui, |ui| {
                 ui.label("Plan");
@@ -710,8 +710,11 @@ impl App {
                 ui.label("Thickness, mm");
                 changed |= ui.add(egui::DragValue::new(&mut h).speed(5.0).range(80.0..=5000.0)).changed();
                 ui.end_row();
+                ui.label("Flat plate");
+                changed |= ui.checkbox(&mut plate, "on columns, no beams").on_hover_text("Analysed as plate finite elements whatever the slab method, and designed as a flat plate (ACI 318-19): column and middle strip bars, punching at every column with the unbalanced moments (8.4.4.2), moment transfer by flexure within c2 + 3h (8.4.2.2.3), the minimum thickness of Table 8.3.1.1").changed();
+                ui.end_row();
                 ui.label("Foundation mat");
-                changed |= ui.checkbox(&mut mat, "pile cap / raft").on_hover_text("Designed as a foundation: bars of each face over the whole panel, punching checked at every support and column. Needs the plate slab method.").changed();
+                changed |= ui.checkbox(&mut mat, "pile cap / raft").on_hover_text("Designed as a foundation: bars of each face over the whole panel, punching checked at every support and column. Analysed as plate finite elements.").changed();
                 ui.end_row();
                 ui.label("Subgrade, kN/m³");
                 changed |= ui.add(egui::DragValue::new(&mut subgrade).speed(250.0).range(0.0..=1.0e6)).on_hover_text("Winkler modulus of the soil under the panel (0: none): springs under every plate node").changed();
@@ -735,6 +738,7 @@ impl App {
                     x.subgrade = subgrade;
                     x.mat = mat;
                     x.support_size = support_size;
+                    x.plate = plate;
                 }
             }
             // the plate results of this slab under the shown result
@@ -1327,6 +1331,7 @@ impl App {
             egui::Window::new("Materials and design settings").open(&mut open).default_width(360.0).show(ctx, |ui| {
                 let mut d = self.model.design.clone();
                 let mut mats = self.model.materials.clone();
+                let mut set_combos = None;
                 egui::Grid::new("settings").num_columns(2).spacing([8.0, 6.0]).show(ui, |ui| {
                     for m in mats.iter_mut() {
                         ui.label(&m.name);
@@ -1370,6 +1375,23 @@ impl App {
                     ui.end_row();
                     ui.label("Target ratio");
                     ui.add(egui::DragValue::new(&mut d.target_ratio).speed(0.01).range(0.5..=1.0));
+                    ui.end_row();
+                    ui.label("Design standard").on_hover_text("Load and strength reduction factors. Thai Ministerial Regulation on structural design B.E. 2566 (กฎกระทรวง กำหนดการออกแบบโครงสร้างอาคาร พ.ศ. 2566): U = 1.4D + 1.7L, 0.75(1.4D + 1.7L) + 1.6W or 1.0E, 0.9D + 1.6W or 1.0E; φ with quality control 0.90 flexure, 0.70 tied columns, 0.85 shear, without it 0.75, 0.60, 0.70");
+                    ui.horizontal(|ui| {
+                        use pondus_core::codes::DesignStandard;
+                        egui::ComboBox::from_id_salt("standard").selected_text(match d.standard {
+                            DesignStandard::Aci => "ACI 318-19 / ASCE 7-22",
+                            DesignStandard::Mr2566 => "กฎกระทรวง 2566 (QC)",
+                            DesignStandard::Mr2566NoQc => "กฎกระทรวง 2566 (no QC)",
+                        }).width(170.0).show_ui(ui, |ui| {
+                            ui.selectable_value(&mut d.standard, DesignStandard::Aci, "ACI 318-19 / AISC 360-16 / ASCE 7-22");
+                            ui.selectable_value(&mut d.standard, DesignStandard::Mr2566, "กฎกระทรวง 2566, quality controlled");
+                            ui.selectable_value(&mut d.standard, DesignStandard::Mr2566NoQc, "กฎกระทรวง 2566, no quality control");
+                        });
+                        if ui.button("Use its combinations").on_hover_text("Replace the model's load combinations with the standard's, from the load case kinds").clicked() {
+                            set_combos = Some(d.standard);
+                        }
+                    });
                     ui.end_row();
                     ui.label("Steel code");
                     ui.horizontal(|ui| {
@@ -1449,6 +1471,10 @@ impl App {
                     self.commit();
                     self.model.design = d;
                     self.model.materials = mats;
+                }
+                if let Some(st) = set_combos {
+                    self.commit();
+                    self.model.combos = st.combinations(&self.model.cases);
                 }
             });
             self.settings_open = open;

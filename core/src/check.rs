@@ -57,7 +57,7 @@ pub fn problems(m: &Model) -> Vec<String> {
         // a support under a plate slab (a pile under a cap, a pedestal under a mat) holds the slab
         let on_slab = m.node(s.node).and_then(|n| m.slabs.iter().find(|sl| sl.contains(n.x, n.y, n.z)));
         match on_slab {
-            Some(_) if m.design.slab_method == crate::slabfe::SlabMethod::Plate => {}
+            Some(sl) if m.plate_slab(sl) => {}
             Some(sl) => out.push(format!("the support at node {} lies in slab {} but holds no member: set_design slab_method 'plate' so the slab rests on it", s.node, sl.id)),
             None => out.push(format!("the support at node {} holds no member", s.node)),
         }

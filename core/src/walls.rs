@@ -231,7 +231,7 @@ pub fn design_pier(w: &Wall, member: &Member, z0: f64, z1: f64, fc: f64, fy: f64
     let sq = fc.sqrt();
     let ratio_hl = hw / lw.max(1.0);
     let alpha_c = if ratio_hl <= 1.5 { 0.25 } else if ratio_hl >= 2.0 { 0.17 } else { 0.25 - (ratio_hl - 1.5) / 0.5 * 0.08 };
-    let phi_v = 0.75;
+    let phi_v = crate::codes::phi().shear;
     // the demands (N, N·mm), compression +
     let st: Vec<(String, f64, f64, f64, f64, f64)> = uls.iter().flat_map(|(c, s)| s.iter().map(move |s| (c.clone(), -s.1 * 1e3, s.3.abs() * 1e3, s.2.abs() * 1e3, s.4.abs() * 1e6, s.5.abs() * 1e6))).collect();
     let vu = st.iter().map(|s| s.2).fold(0.0, f64::max);
@@ -263,7 +263,7 @@ pub fn design_pier(w: &Wall, member: &Member, z0: f64, z1: f64, fc: f64, fy: f64
     }
     let vn = (alpha_c * sq + rho_t * fy) * acv;
     phi_vn = phi_v * vn.min(vn_max).max(phi_vn);
-    checks.push(WallCheck { name: "in-plane shear (11.5.4)".into(), ratio: vu / phi_vn.max(1.0), detail: format!("Vu {:.0} kN, φVn = 0.75 Acv(αc √f'c + ρt fy) = {:.0} kN (αc {alpha_c:.2}, ρt {:.4}; limit 0.66 √f'c Acv = {:.0} kN)", vu / 1e3, phi_vn / 1e3, rho_t, phi_v * vn_max / 1e3) });
+    checks.push(WallCheck { name: "in-plane shear (11.5.4)".into(), ratio: vu / phi_vn.max(1.0), detail: format!("Vu {:.0} kN, φVn = {phi_v:.2} Acv(αc √f'c + ρt fy) = {:.0} kN (αc {alpha_c:.2}, ρt {:.4}; limit 0.66 √f'c Acv = {:.0} kN)", vu / 1e3, phi_vn / 1e3, rho_t, phi_v * vn_max / 1e3) });
     // vertical steel: the least that passes axial with in-plane and out-of-plane bending
     let rho_l_min = |db: f64| {
         let base: f64 = if special || high_shear { 0.0025 } else if small_bar(db) { 0.0012 } else { 0.0015 };

@@ -37,12 +37,13 @@ fn sqrt_fc(fc: f64) -> f64 {
 }
 
 /// Tension steel (and compression steel) for a moment Mu (N·mm) on a rectangle b x d (mm),
-/// with compression steel at d' when needed. φ = 0.9: the design keeps εt ≥ 0.005.
+/// with compression steel at d' when needed. φ is the tension-controlled one (0.9 by ACI
+/// 318-19): the design keeps εt ≥ 0.005.
 pub fn flexure_steel(mu: f64, b: f64, d: f64, d2: f64, fc: f64, fy: f64) -> (f64, f64) {
     if mu <= 0.0 {
         return (0.0, 0.0);
     }
-    let phi = 0.9;
+    let phi = crate::codes::phi().flexure;
     let b1 = beta1(fc);
     // the largest tension-controlled singly reinforced capacity: c = 3d/8 (εt = 0.005)
     let c_max = 0.375 * d;
@@ -69,7 +70,8 @@ pub fn phi_mn(as_: f64, b: f64, d: f64, fc: f64, fy: f64) -> f64 {
     let a = as_ * fy / (0.85 * fc * b);
     let c = a / beta1(fc);
     let et = 0.003 * (d - c) / c.max(1e-9);
-    let phi = if et >= 0.005 { 0.9 } else if et <= 0.002 { 0.65 } else { 0.65 + 0.25 * (et - 0.002) / 0.003 };
+    let f = crate::codes::phi();
+    let phi = if et >= 0.005 { f.flexure } else if et <= 0.002 { f.tied } else { f.tied + (f.flexure - f.tied) * (et - 0.002) / 0.003 };
     phi * as_ * fy * (d - a / 2.0)
 }
 
@@ -253,7 +255,7 @@ pub fn design_beam(member: crate::model::Id, bim_id: Option<String>, b_m: f64, h
     let all = || dem.uls.iter().flatten();
     // torsion (22.7): over the threshold it needs closed stirrups and longitudinal steel
     let sq = sqrt_fc(fc);
-    let phi_t = 0.75;
+    let phi_t = crate::codes::phi().shear;
     let tu_all = all().map(|s| s.3.abs()).fold(0.0, f64::max);
     let tt = torsion_terms(b, h, cover, ds, fc, fy, fyt, tu_all);
     let (phi_tth, aoh, ph, ao) = (tt.phi_tth, tt.aoh, tt.ph, tt.ao);
@@ -266,13 +268,16 @@ pub fn design_beam(member: crate::model::Id, bim_id: Option<String>, b_m: f64, h
         for (zi, (zn, x0, x1)) in zones.iter().enumerate() {
             let mu = all().filter(|s| s.0 >= x0 - 1e-6 && s.0 <= x1 + 1e-6).map(|s| sign * s.1).fold(0.0, f64::max);
             let mu_n = mu * 1e6;
+            // the bottom bars at midspan carry at least the minimum steel of 9.6.1.2 even where
+            // the analysis gives no sagging there (a tie or strap beam), as they run through it
+            let mid_bottom = face == "bottom" && *zn == "middle";
             // first trial with a 20 mm bar in one layer, then with the bars chosen
             let mut d = h - cover - ds - 10.0;
             let mut chosen: Option<Bars> = None;
             let mut req = (0.0, 0.0);
             for _ in 0..3 {
                 req = flexure_steel(mu_n, b, d, cover + ds + 10.0, fc, fy);
-                let as_t = req.0.max(if mu > 0.0 { as_min_beam(b, d, fc, fy) } else { 0.0 }) + al / 4.0;
+                let as_t = req.0.max(if mu > 0.0 || mid_bottom { as_min_beam(b, d, fc, fy) } else { 0.0 }) + al / 4.0;
                 chosen = choose_bars(as_t.max(1.0), b, cover, ds, &set.beam_bars, set.aggregate);
                 match &chosen {
                     Some(bars) => {
@@ -285,7 +290,7 @@ pub fn design_beam(member: crate::model::Id, bim_id: Option<String>, b_m: f64, h
                     None => break,
                 }
             }
-            let as_req = req.0.max(if mu > 0.0 { as_min_beam(b, d, fc, fy) } else { 0.0 }) + al / 4.0;
+            let as_req = req.0.max(if mu > 0.0 || mid_bottom { as_min_beam(b, d, fc, fy) } else { 0.0 }) + al / 4.0;
             if !req.0.is_finite() {
                 ok = false;
                 notes.push(format!("{face} {zn}: Mu {mu:.1} kN·m is beyond what compression steel can add to this section: make it deeper"));
@@ -356,7 +361,7 @@ pub fn design_beam(member: crate::model::Id, bim_id: Option<String>, b_m: f64, h
             tu = tu.max(s.3.abs());
         }
         let at_s = at_s_for(tu);
-        let phi = 0.75;
+        let phi = crate::codes::phi().shear;
         let vu_n = vu * 1000.0;
         let st = shear_terms(fc, b, d, vu_n, nu * 1000.0, ag, fyt);
         let (vc, vs, vs_max) = (st.vc, st.vs, st.vs_max);
@@ -495,16 +500,16 @@ pub struct ShearTerms {
 pub fn shear_terms(fc: f64, bw: f64, d: f64, vu: f64, nu: f64, ag: f64, fyt: f64) -> ShearTerms {
     let sq = sqrt_fc(fc);
     let vc = ((0.17 * sq + nu.min(0.0) / (6.0 * ag)).max(0.0)) * bw * d;
-    let vs = (vu / 0.75 - vc).max(0.0);
+    let vs = (vu / crate::codes::phi().shear - vc).max(0.0);
     let s_max = if vs <= 0.33 * sq * bw * d { (d / 2.0).min(600.0) } else { (d / 4.0).min(300.0) };
     ShearTerms { vc, vs, vs_max: 0.66 * sq * bw * d, s_max, av_s_min: (0.062 * sq).max(0.35) * bw / fyt }
 }
 
 /// The nominal axial strength P0 = 0.85 f'c (Ag − Ast) + fy Ast (22.4.2.2) and φPn,max =
-/// 0.80 φ P0 of a tied column (Table 22.4.2.1, φ = 0.65), N.
+/// 0.80 φ P0 of a tied column (Table 22.4.2.1, φ = 0.65; 0.70 by the Thai regulation), N.
 pub fn column_p0(ag: f64, ast: f64, fc: f64, fy: f64) -> (f64, f64) {
     let p0 = 0.85 * fc * (ag - ast) + fy * ast;
-    (p0, 0.80 * 0.65 * p0)
+    (p0, 0.80 * crate::codes::phi().tied * p0)
 }
 
 /// The torsion terms of a solid rectangle b x h (mm) with closed stirrups of diameter `ds` at
@@ -529,7 +534,7 @@ pub struct TorsionTerms {
 pub fn torsion_terms(b: f64, h: f64, cover: f64, ds: f64, fc: f64, fy: f64, fyt: f64, tu: f64) -> TorsionTerms {
     let sq = sqrt_fc(fc);
     let (acp, pcp) = (b * h, 2.0 * (b + h));
-    let phi = 0.75;
+    let phi = crate::codes::phi().shear;
     let phi_tth = phi * 0.083 * sq * acp * acp / pcp / 1e6;
     let (x1, y1) = (b - 2.0 * cover - ds, h - 2.0 * cover - ds);
     let (aoh, ph) = (x1 * y1, 2.0 * (x1 + y1));
@@ -544,7 +549,7 @@ pub fn torsion_terms(b: f64, h: f64, cover: f64, ds: f64, fc: f64, fy: f64, fyt:
 /// φ(Vc/bw d + 0.66√f'c), with Vu in N, Tu in N·mm, Vc in N, lengths in mm.
 pub fn torsion_section_ratio(vu: f64, tu: f64, bw: f64, d: f64, vc: f64, aoh: f64, ph: f64, fc: f64) -> f64 {
     let lhs = ((vu / (bw * d)).powi(2) + (tu * ph / (1.7 * aoh * aoh)).powi(2)).sqrt();
-    lhs / (0.75 * (vc / (bw * d) + 0.66 * sqrt_fc(fc)))
+    lhs / (crate::codes::phi().shear * (vc / (bw * d) + 0.66 * sqrt_fc(fc)))
 }
 
 /// The cracked transformed section of a rectangle with tension steel only: the neutral-axis
@@ -630,6 +635,20 @@ pub struct SlabDesign {
     pub governs: String,
     pub ok: bool,
     pub notes: Vec<String>,
+    /// A flat plate's strips: where its bars go (for the bar layout in the BIM model).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flat: Option<FlatStrips>,
+}
+
+/// The geometry of a flat plate's strips: the column lines (x of the lines along y, y of the
+/// lines along x), the column strips' half width each side of a line, and the columns (x, y,
+/// c1 along x, c2 along y), m.
+#[derive(Clone, Debug, Serialize)]
+pub struct FlatStrips {
+    pub lines_x: Vec<f64>,
+    pub lines_y: Vec<f64>,
+    pub half_width: f64,
+    pub columns: Vec<[f64; 4]>,
 }
 
 /// Whether a bar is a round bar (RB6, RB9: grade SR24) rather than a deformed one.
@@ -667,7 +686,7 @@ pub fn design_slab(slab: &crate::model::Slab, cont: [bool; 4], wd: f64, wl: f64,
     let h = slab.h * 1000.0;
     let fc = mat.fc;
     let fy = mat.fy;
-    let wu = (1.2 * wd + 1.6 * wl).max(1.4 * wd);
+    let wu = set.standard.gravity(wd, wl);
     let cover = set.cover_slab * 1000.0;
     let db0 = set.slab_bars.first().copied().unwrap_or(9.0);
     let d_short = h - cover - db0 / 2.0;
@@ -756,7 +775,7 @@ pub fn design_slab(slab: &crate::model::Slab, cont: [bool; 4], wd: f64, wl: f64,
         notes.push("Method 2 moments are those of the middle strip; the column strips may take 2/3 of them, here they get the same bars".into());
         notes.push("minimum thickness from Table 8.3.1.2 assumes stiff edge beams (αfm > 2)".into());
     }
-    let phi_vc = 0.75 * 0.17 * sqrt_fc(fc) * 1000.0 * d_short / 1000.0;
+    let phi_vc = crate::codes::phi().shear * 0.17 * sqrt_fc(fc) * 1000.0 * d_short / 1000.0;
     let rv = vu / phi_vc;
     if rv > ratio {
         ratio = rv;
@@ -770,7 +789,7 @@ pub fn design_slab(slab: &crate::model::Slab, cont: [bool; 4], wd: f64, wl: f64,
         }
     }
     let ok = ratio <= set.target_ratio + 1e-9;
-    SlabDesign { slab: slab.id, bim_id: slab.bim_id.clone(), name: slab.name.clone(), lx, ly, h: slab.h, method, discontinuous_edges: disc, wu, strips, h_min, vu, phi_vc, ratio, governs, ok, notes }
+    SlabDesign { slab: slab.id, bim_id: slab.bim_id.clone(), name: slab.name.clone(), lx, ly, h: slab.h, method, discontinuous_edges: disc, wu, strips, h_min, vu, phi_vc, ratio, governs, ok, notes, flat: None }
 }
 
 #[cfg(test)]
@@ -887,15 +906,17 @@ pub fn bar_rows(depth: f64, cover_c: f64, n_d: usize, n_s: usize, ab: f64) -> Ve
     out
 }
 
-/// φ for a section whose extreme tension steel strains εt (ACI 318-19 Table 21.2.2, tied).
+/// φ for a section whose extreme tension steel strains εt (ACI 318-19 Table 21.2.2, tied),
+/// between the active standard's compression-controlled and tension-controlled values.
 pub fn phi_tied(et: f64, fy: f64) -> f64 {
     let ety = fy / ES;
+    let f = crate::codes::phi();
     if et >= ety + 0.003 {
-        0.9
+        f.flexure
     } else if et <= ety {
-        0.65
+        f.tied
     } else {
-        0.65 + 0.25 * (et - ety) / 0.003
+        f.tied + (f.flexure - f.tied) * (et - ety) / 0.003
     }
 }
 
@@ -927,7 +948,7 @@ pub fn column_phi_mn(width: f64, depth: f64, rows: &[(f64, f64)], fc: f64, fy: f
     if pu > cap {
         return 0.0;
     }
-    let pt = -0.9 * fy * ast;
+    let pt = -crate::codes::phi().flexure * fy * ast;
     if pu < pt {
         return 0.0;
     }
@@ -1090,7 +1111,7 @@ pub fn design_column(member: crate::model::Id, bim_id: Option<String>, b_m: f64,
             None => checks.push(ColumnCheck { name: name.into(), ratio: r, detail }),
         };
         for l in &loads {
-            let ra = if l.pu > 0.0 { l.pu / cap } else { -l.pu / (0.9 * fy * ast) };
+            let ra = if l.pu > 0.0 { l.pu / cap } else { -l.pu / (crate::codes::phi().flexure * fy * ast) };
             push("axial", ra, format!("{}: Pu {:.0} kN, φPn,max {:.0} kN", l.name, l.pu / 1e3, cap / 1e3), &mut checks);
             let my_cap = column_phi_mn(b, h, &rows_y, fc, fy, l.pu);
             let mz_cap = column_phi_mn(h, b, &rows_z, fc, fy, l.pu);
@@ -1140,7 +1161,7 @@ pub fn design_column(member: crate::model::Id, bim_id: Option<String>, b_m: f64,
                 let s_req = 2.0 * ab_t * fyt * d / vs;
                 s = s.min((s_req.min(d / 2.0) / 25.0).floor() * 25.0);
             }
-            let cap = 0.75 * (vc + 2.0 * ab_t * fyt * d / s.max(25.0));
+            let cap = crate::codes::phi().shear * (vc + 2.0 * ab_t * fyt * d / s.max(25.0));
             let r = v / cap;
             match checks.iter_mut().find(|c| c.name == "shear") {
                 Some(c) if c.ratio >= r => {}

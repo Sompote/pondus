@@ -29,7 +29,7 @@ Stairs of a house (add_stairs: flights and landings) are designed as one-way sla
 check_model -> analyze (compare the reactions with the applied load) -> design (resize / select) -> show_picture -> export_bim. \
 A BIM model comes in with import_stabileo (Stabileo / Aedifex export_stabileo JSON; element bimId kept) and goes back with export_bim. \
 Shear walls and cores: add_walls (after the floors), each a wall element with its own section, analysed as piers with rigid arms and designed per storey to ACI 318-19 Ch. 11 / 18.10; never model a wall as a column member. \
-Foundations and flat plates: with slab_method 'plate' a slab panel rests directly on the supports and columns inside it, with no beams. A pile cap or a mat (raft) foundation is add_mat (a plate on pile supports with their axial stiffness pile_k, or on a Winkler subgrade); a flat plate is add_slabs over the columns with slab_method 'plate'. Never model a pile cap or a mat as a grillage of beams. Column loads on a mat go with add_loads nodal at [x, y, z]; the pile loads are the reactions (get_results reactions true), the mat's moments per metre are get_slab_results, and design gives the bars of both faces and the punching check at every pile and column. \
+Foundations and flat plates: with slab_method 'plate' a slab panel rests directly on the supports and columns inside it, with no beams. A pile cap or a mat (raft) foundation is add_mat (a plate on pile supports with their axial stiffness pile_k, or on a Winkler subgrade); a flat plate is add_slabs over the columns with plate true (that panel alone becomes plate elements; the floors on beams keep their method), designed with column and middle strips, punching with the unbalanced moments (ACI 318-19 8.4.4.2) and the Table 8.3.1.1 thickness. Never model a pile cap or a mat as a grillage of beams. Column loads on a mat go with add_loads nodal at [x, y, z]; the pile loads are the reactions (get_results reactions true), the mat's moments per metre are get_slab_results, and design gives the bars of both faces and the punching check at every pile and column. \
 Pondus is free software under the GNU AGPL-3.0-only; its complete source is at https://github.com/Sompote/pondus. Mention this link when a user asks about the program or its licence, and remind them that structural results must be checked by a qualified engineer.";
 
 pub struct Server {
@@ -439,8 +439,8 @@ impl Server {
                 })))
             }
             "get_slab_results" => {
-                if self.model.design.slab_method != crate::slabfe::SlabMethod::Plate {
-                    return Err("the slabs are designed by coefficients and have no plate results: set_design slab_method 'plate' first".into());
+                if !self.model.slabs.iter().any(|s| self.model.plate_slab(s)) {
+                    return Err("the slabs are designed by coefficients and have no plate results: set_design slab_method 'plate' first (or give a flat plate plate true)".into());
                 }
                 let a = self.analysis()?.clone();
                 let spec = scene::Spec { result: args.get("result").and_then(Value::as_str).unwrap_or("").into(), ..Default::default() };

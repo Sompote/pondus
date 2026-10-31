@@ -366,8 +366,8 @@ pub fn member_loads(model: &Model, warnings: &mut Vec<String>) -> (Vec<MemberLoa
             out.push(MemberLoad { case: c.id, member: m.id, a: 0.0, b: len, wa: [0.0, 0.0, -w], wb: [0.0, 0.0, -w] });
         }
     }
-    let plate = model.design.slab_method == crate::slabfe::SlabMethod::Plate;
-    let (sl, applied, expected) = if plate { (vec![], [0.0; 2], [0.0; 2]) } else { crate::slabload::loads(model, warnings) };
+    // the slabs designed by coefficients load their beams; the plate slabs load themselves
+    let (sl, applied, expected) = crate::slabload::loads(model, warnings);
     out.extend(sl);
     (out, points, applied, expected)
 }
@@ -521,11 +521,11 @@ pub fn analyze(model: &Model) -> Result<Analysis, String> {
 /// whose cost grows with the cube of the degrees of freedom.
 pub fn analyze_with(model: &Model, beams: usize, columns: usize) -> Result<Analysis, String> {
     let mut warnings = crate::check::problems(model);
-    let plates_only = model.design.slab_method == crate::slabfe::SlabMethod::Plate && !model.slabs.is_empty();
+    let plates_only = model.slabs.iter().any(|s| model.plate_slab(s));
     if model.members.is_empty() && !plates_only {
         return Err("the model has no members (a slab resting on supports alone needs slab_method 'plate')".into());
     }
-    if model.supports.is_empty() && !(plates_only && model.slabs.iter().any(|s| s.subgrade > 0.0)) {
+    if model.supports.is_empty() && !model.slabs.iter().any(|s| model.plate_slab(s) && s.subgrade > 0.0) {
         return Err("the model has no supports".into());
     }
     let (mloads, points, slab_applied, slab_expected) = member_loads(model, &mut warnings);
@@ -541,7 +541,7 @@ pub fn analyze_with(model: &Model, beams: usize, columns: usize) -> Result<Analy
         engine_nodes.push(n.p());
         at.entry(key(n.p())).or_insert(engine_nodes.len());
     }
-    let meshes = if model.design.slab_method == crate::slabfe::SlabMethod::Plate { crate::slabfe::meshes(model) } else { vec![] };
+    let meshes = crate::slabfe::meshes(model);
     let mesh_points: Vec<[f64; 3]> = meshes.iter().flat_map(|me| (0..me.xs.len()).flat_map(move |i| (0..me.ys.len()).map(move |j| me.point(i, j)))).collect();
     let mut pieces: Vec<Piece> = vec![];
     let mut member_nodes: HashMap<Id, Vec<(f64, usize)>> = HashMap::new();

@@ -368,13 +368,15 @@ pub fn moving_loads(model: &Model, a: &Analysis, spec: &MovingSpec) -> Result<(C
     Ok((hi, lo))
 }
 
-/// The moving-load strength combinations: 1.2 D + factor x (M max), and with M min.
+/// The moving-load strength combinations: 1.2 D + factor x (M max), and with M min (1.4 D
+/// by the Thai Ministerial Regulation B.E. 2566, whose live load factor is 1.7).
 pub fn moving_combos(model: &Model, a: &Analysis) -> Vec<(String, CaseResult)> {
     let (Some(spec), Some((hi, lo))) = (&model.moving, &a.moving) else { return vec![] };
-    let d: Vec<(Id, f64)> = model.cases.iter().filter(|c| c.kind == CaseKind::D).map(|c| (c.id, 1.2)).collect();
+    let fd = if model.design.standard.is_thai() { 1.4 } else { 1.2 };
+    let d: Vec<(Id, f64)> = model.cases.iter().filter(|c| c.kind == CaseKind::D).map(|c| (c.id, fd)).collect();
     let mut out = vec![];
     for (env, tag) in [(hi, "max"), (lo, "min")] {
-        let name = format!("ULS 1.2D + {:.2} {} {tag}", spec.factor, spec.name);
+        let name = format!("ULS {fd:.1}D + {:.2} {} {tag}", spec.factor, spec.name);
         let mut r = a.combine(&name, &d);
         r.scaled_add(env, spec.factor);
         r.name = name.clone();
@@ -546,13 +548,13 @@ fn bare(model: &Model) -> Model {
     for c in &mut m.cases {
         c.self_weight = false;
     }
-    if m.design.slab_method == crate::slabfe::SlabMethod::Plate {
-        for s in &mut m.slabs {
-            s.dead = 0.0;
-            s.live = 0.0;
-        }
-    } else {
-        m.slabs.clear();
+    // the plate slabs stay (they are part of the structure) with no load; the others go
+    let keep: Vec<bool> = m.slabs.iter().map(|s| m.plate_slab(s)).collect();
+    let mut k = keep.iter();
+    m.slabs.retain(|_| *k.next().unwrap());
+    for s in &mut m.slabs {
+        s.dead = 0.0;
+        s.live = 0.0;
     }
     m.moving = None;
     m.stages.clear();

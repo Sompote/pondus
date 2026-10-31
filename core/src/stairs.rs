@@ -134,7 +134,7 @@ pub fn design(s: &Stair, mat: &RcMat, set: &DesignSettings, gamma: f64) -> Stair
             (gamma * s.waist + s.dead + s.flight_dead * spread, s.live + s.flight_live * spread)
         }
     };
-    let wu = (1.2 * wd + 1.6 * wl).max(1.4 * wd);
+    let wu = set.standard.gravity(wd, wl);
     let l = s.span;
     let cont = s.fixity != "simple";
     let (m_pos, m_neg) = if cont { (wu * l * l / 10.0, wu * l * l / 10.0) } else { (wu * l * l / 8.0, 0.0) };
@@ -158,7 +158,7 @@ pub fn design(s: &Stair, mat: &RcMat, set: &DesignSettings, gamma: f64) -> Stair
     push("distribution (across)", 0.0, s_max_dist, &mut bars);
     // one-way shear at the support, per m: φVc = 0.75 · 0.17 √f'c b d (22.5.5.1)
     let vu = wu * l / 2.0;
-    let phi_vc = 0.75 * 0.17 * fc.sqrt() * 1000.0 * d / 1000.0;
+    let phi_vc = crate::codes::phi().shear * 0.17 * fc.sqrt() * 1000.0 * d / 1000.0;
     let rv = vu / phi_vc;
     if rv > ratio {
         ratio = rv;

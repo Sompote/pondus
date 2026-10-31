@@ -366,6 +366,14 @@ fn picture(model: &Model, a: Option<&Analysis>, rep: Option<&Report>, diagram: s
 fn codes(model: &Model) -> String {
     let steel = if model.design.steel_code == crate::codes::SteelCode::Ec3 { "EN 1993-1-1 (Eurocode 3)" } else { "AISC 360-16 (LRFD)" };
     let mut s = format!("Reinforced concrete is designed to ACI 318-19 and structural steel to {steel}");
+    if model.design.standard.is_thai() {
+        let f = model.design.standard.phi();
+        s = format!(
+            "The load factors and strength reduction factors follow the Thai Ministerial Regulation on structural design B.E. 2566 ({}), so the factored loads are 1.4D + 1.7L, 0.75(1.4D + 1.7L) + 1.6W, 0.9D + 1.6W, 0.75(1.4D + 1.7L) ± 1.0E and 0.9D ± 1.0E, and φ is {:.2} for flexure, {:.2} for tied columns and {:.2} for shear and torsion. {s}",
+            if model.design.standard == crate::codes::DesignStandard::Mr2566 { "construction standards and material quality control specified" } else { "no construction standards or material quality control specified" },
+            f.flexure, f.tied, f.shear
+        );
+    }
     if model.design.ec2_check {
         s.push_str(", with an EN 1992-1-1 cross-check of the concrete beams");
     }

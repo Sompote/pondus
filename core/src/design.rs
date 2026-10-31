@@ -288,6 +288,7 @@ fn h_dims(sh: &Shape) -> Option<HDims> {
 
 /// One design pass on an analysis.
 pub fn design_pass(model: &Model, a: &Analysis, o: &Options) -> Report {
+    let _standard = crate::codes::use_standard(model.design.standard);
     let res = results(model, a);
     let mut rep = Report { warnings: a.warnings.clone(), ..Default::default() };
     if res.uls.is_empty() {
@@ -417,9 +418,8 @@ pub fn design_pass(model: &Model, a: &Analysis, o: &Options) -> Report {
     if o.do_slabs {
         let gamma = model.materials.iter().find(|m| m.kind == MaterialKind::Concrete).map(|m| m.gamma).unwrap_or(24.0);
         let mat = model.materials.iter().find(|m| m.kind == MaterialKind::Concrete).map(|c| RcMat { fc: c.fc.max(1.0), ec: c.e, fy: model.design.fy, fyt: model.design.fyt }).unwrap_or(RcMat { fc: 24.0, ec: 23_000.0, fy: model.design.fy, fyt: model.design.fyt });
-        let plate = model.design.slab_method == crate::slabfe::SlabMethod::Plate;
         for s in model.slabs.iter().filter(|s| o.slabs.is_empty() || o.slabs.contains(&s.id)) {
-            if plate {
+            if model.plate_slab(s) {
                 let uls: Vec<Vec<&crate::slabfe::PlateResult>> = res.uls.iter().map(|(_, r)| r.plates.iter().filter(|p| p.slab == s.id).collect()).collect();
                 let sls: Vec<&crate::slabfe::PlateResult> = res.dead_live.plates.iter().filter(|p| p.slab == s.id).collect();
                 // the columns on the panel and the supports under it: punching is checked there
@@ -730,17 +730,38 @@ pub fn bim_export(model: &Model, rep: &Report) -> serde_json::Value {
         if let Some(d) = rep.slabs.iter().find(|d| d.slab == s.id) {
             e["reinforcement"] = json!(d.strips.iter().map(|t| format!("{} {}: {}", t.direction, t.location, t.bars)).collect::<Vec<_>>());
             e["method"] = json!(d.method);
+            if let Some(f) = &d.flat {
+                e["flat_plate"] = json!({"lines_x": f.lines_x, "lines_y": f.lines_y, "strip_half_width": f.half_width, "columns": f.columns});
+            }
             e["ratio"] = json!(round(d.ratio, 3));
             e["ok"] = json!(d.ok);
             e["code"] = json!("ACI 318-19");
         }
         e
     }).collect();
-    let footings: Vec<_> = rep.footings.iter().map(|f| json!({
-        "node": f.node, "column_base": f.at, "family": "Footing - Rectangular", "type": format!("{:.0} x {:.0} x {:.0} mm", f.l * 1e3, f.b * 1e3, f.h * 1e3),
-        "type_params_m": {"Width": f.b, "Length": f.l, "Thickness": f.h}, "top_z": f.at[2], "reinforcement": {"bottom_x": f.bars_x, "bottom_y": f.bars_y},
-        "ratio": round(f.ratio, 3), "ok": f.ok, "code": "ACI 318-19 / allowable bearing",
-    })).collect();
+    // Width along x and Length along y (the BIM family's box), l along x and b along y here
+    let footings: Vec<_> = rep.footings.iter().map(|f| {
+        let mut e = json!({
+            "node": f.node, "column_base": f.at, "family": "Footing - Rectangular", "type": format!("{:.0} x {:.0} x {:.0} mm", f.l * 1e3, f.b * 1e3, f.h * 1e3),
+            "type_params_m": {"Width": f.l, "Length": f.b, "Thickness": f.h}, "top_z": f.at[2], "reinforcement": {"bottom_x": f.bars_x, "bottom_y": f.bars_y},
+            "ratio": round(f.ratio, 3), "ok": f.ok, "code": "ACI 318-19 / allowable bearing",
+        });
+        if f.pile_capacity > 0.0 {
+            e["family"] = json!("Pile Cap - Rectangular");
+            e["notes"] = json!(f.notes);
+            e["piles_needed"] = json!(f.piles_needed);
+            e["column"] = json!(f.column);
+        }
+        if !f.piles.is_empty() {
+            e["code"] = json!("ACI 318-19 Ch. 13 / pile safe load");
+            e["cap_centre"] = json!(f.at);
+            e["column"] = json!(f.column);
+            e["piles"] = json!(f.piles);
+            e["pile"] = json!({"diameter_m": f.pile_diameter, "length_m": f.pile_length, "safe_load_kN": f.pile_capacity, "largest_load_kN": round(f.pile_load, 1)});
+            e["notes"] = json!(f.notes);
+        }
+        e
+    }).collect();
     let walls: Vec<_> = model.walls.iter().map(|w| {
         let rows: Vec<_> = rep.walls.iter().filter(|d| d.wall == w.id).map(|d| json!({"z": [round(d.z0, 3), round(d.z1, 3)], "vertical": d.vertical, "horizontal": d.horizontal, "boundary_elements": d.boundary, "ratio": round(d.ratio, 3), "ok": d.ok})).collect();
         let ok = rows.iter().all(|r| r["ok"].as_bool().unwrap_or(true));
@@ -755,7 +776,7 @@ pub fn bim_export(model: &Model, rep: &Report) -> serde_json::Value {
     json!({
         "format": "pondus-bim-1",
         // what the bars were designed with, so the BIM side can lay them out and check them
-        "settings": {"code": "ACI 318-19", "fc_MPa": conc.map(|m| m.fc), "fy_MPa": model.design.fy, "fyt_MPa": model.design.fyt, "cover_beam_mm": model.design.cover_beam * 1e3, "cover_slab_mm": model.design.cover_slab * 1e3, "cover_footing_mm": model.design.footing.cover * 1e3, "aggregate_mm": model.design.aggregate},
+        "settings": {"code": "ACI 318-19", "fc_MPa": conc.map(|m| m.fc), "fy_MPa": model.design.fy, "fyt_MPa": model.design.fyt, "cover_beam_mm": model.design.cover_beam * 1e3, "cover_slab_mm": model.design.cover_slab * 1e3, "cover_footing_mm": model.design.footing.cover * 1e3, "aggregate_mm": model.design.aggregate, "piles": model.design.footing.piles.as_ref().map(|p| json!({"spacing_m": p.s(), "edge_m": p.e(), "diameter_m": p.diameter, "length_m": p.length, "safe_load_kN": p.capacity, "bounds": p.bounds}))},
         "walls": walls,
         "footings": footings,
         "units": "m, kN, MPa",

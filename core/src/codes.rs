@@ -16,6 +16,138 @@ use crate::rc::BeamDesign;
 use crate::sections::bar_area;
 use crate::steel::{HDims, SteelCheck, SteelDemand, SteelDesign};
 
+/// The load factors and strength reduction factors the design uses.
+///
+/// - `Aci`: ACI 318-19 Table 21.2.1 and AISC 360-16, with the ASCE 7-22 combinations.
+/// - `Mr2566` / `Mr2566NoQc`: the Thai Ministerial Regulation on structural design (กฎกระทรวง
+///   กำหนดการออกแบบโครงสร้างอาคาร และลักษณะและคุณสมบัติของวัสดุที่ใช้ในงานโครงสร้างอาคาร
+///   พ.ศ. 2566, Royal Gazette vol. 140 part 54 ก, 6 September 2023, in force 180 days later),
+///   which replaces Ministerial Regulation No. 6 (B.E. 2527). Clause 7 gives the factored loads
+///   U = 1.4D + 1.7L, 0.75(1.4D + 1.7L) + 1.6W, 0.9D + 1.6W, 0.75(1.4D + 1.7L) + 1.0E and
+///   0.9D + 1.0E, and clause 8 the strength reduction factors of reinforced concrete with
+///   specified construction standards and material quality control (flexure and axial tension
+///   0.90, tied columns 0.70, spiral 0.75, shear and torsion 0.85, bearing 0.70) or without
+///   them (0.75, 0.60, 0.625, 0.70, 0.60), and of structural steel (tension yield 0.90, rupture
+///   0.75, compression, flexure and shear 0.90, connections and bolts 0.75).
+///
+/// Between the compression-controlled and the tension-controlled φ the design goes linearly in
+/// the extreme tension strain εt from εty to εty + 0.003, as ACI 318-19 21.2.2 (and ACI 318-05
+/// Appendix C, from which the regulation's factors come) does; the regulation itself gives only
+/// the two end values.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DesignStandard {
+    #[default]
+    Aci,
+    Mr2566,
+    #[serde(rename = "mr2566_noqc")]
+    Mr2566NoQc,
+}
+
+/// The strength reduction factors of one standard.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Phi {
+    /// Concrete: tension-controlled flexure and axial tension.
+    pub flexure: f64,
+    /// Concrete: compression-controlled tied members.
+    pub tied: f64,
+    /// Concrete: shear and torsion.
+    pub shear: f64,
+    /// Steel: shear of a rolled web (None: AISC 360-16 G2.1, 1.0 for stocky webs, else 0.9).
+    pub steel_shear: Option<f64>,
+    /// Steel connections: shear yielding of a plate (AISC J4.2: 1.0).
+    pub conn_shear_yield: f64,
+}
+
+impl DesignStandard {
+    pub fn phi(self) -> Phi {
+        match self {
+            DesignStandard::Aci => Phi { flexure: 0.90, tied: 0.65, shear: 0.75, steel_shear: None, conn_shear_yield: 1.0 },
+            DesignStandard::Mr2566 => Phi { flexure: 0.90, tied: 0.70, shear: 0.85, steel_shear: Some(0.90), conn_shear_yield: 0.75 },
+            DesignStandard::Mr2566NoQc => Phi { flexure: 0.75, tied: 0.60, shear: 0.70, steel_shear: Some(0.90), conn_shear_yield: 0.75 },
+        }
+    }
+    pub fn is_thai(self) -> bool {
+        self != DesignStandard::Aci
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            DesignStandard::Aci => "ACI 318-19 / AISC 360-16 / ASCE 7-22",
+            DesignStandard::Mr2566 => "Thai Ministerial Regulation B.E. 2566 (quality controlled)",
+            DesignStandard::Mr2566NoQc => "Thai Ministerial Regulation B.E. 2566 (no quality control)",
+        }
+    }
+    /// The factored gravity load on a slab or stair, kPa (dead wd and live wl).
+    pub fn gravity(self, wd: f64, wl: f64) -> f64 {
+        if self.is_thai() {
+            1.4 * wd + 1.7 * wl
+        } else {
+            (1.2 * wd + 1.6 * wl).max(1.4 * wd)
+        }
+    }
+    /// The strength and service combinations of this standard for the model's load cases (D,
+    /// L and Lr, W; the earthquake ones are added at design from the seismic analysis). Each
+    /// wind case is taken as defined, so a reversed wind needs its own case.
+    pub fn combinations(self, cases: &[crate::model::LoadCase]) -> Vec<crate::model::Combination> {
+        use crate::model::{CaseKind, Combination, ComboKind};
+        let of = |k: &[CaseKind]| cases.iter().filter(|c| k.contains(&c.kind)).map(|c| c.id).collect::<Vec<_>>();
+        let (d, l, lr, w) = (of(&[CaseKind::D]), of(&[CaseKind::L]), of(&[CaseKind::Lr]), of(&[CaseKind::W]));
+        let mut out: Vec<Combination> = vec![];
+        let mut push = |name: String, kind: ComboKind, f: Vec<(crate::model::Id, f64)>| {
+            if !f.is_empty() {
+                out.push(Combination { id: out.len() + 1, name, kind, factors: f });
+            }
+        };
+        let with = |ids: &[crate::model::Id], x: f64| ids.iter().map(|c| (*c, x)).collect::<Vec<_>>();
+        let cat = |a: Vec<(crate::model::Id, f64)>, b: Vec<(crate::model::Id, f64)>| a.into_iter().chain(b).collect::<Vec<_>>();
+        let wname = |id: crate::model::Id| cases.iter().find(|c| c.id == id).map(|c| c.name.clone()).unwrap_or_default();
+        if self.is_thai() {
+            // the regulation has one live load (นจ.), so the roof live load goes with it
+            let ll: Vec<_> = l.iter().chain(&lr).copied().collect();
+            push("ULS 1.4D + 1.7L".into(), ComboKind::Uls, cat(with(&d, 1.4), with(&ll, 1.7)));
+            for &wi in &w {
+                push(format!("ULS 0.75(1.4D + 1.7L) + 1.6{}", wname(wi)), ComboKind::Uls, cat(cat(with(&d, 1.05), with(&ll, 1.275)), vec![(wi, 1.6)]));
+                push(format!("ULS 0.9D + 1.6{}", wname(wi)), ComboKind::Uls, cat(with(&d, 0.9), vec![(wi, 1.6)]));
+            }
+        } else {
+            push("ULS 1.4D".into(), ComboKind::Uls, with(&d, 1.4));
+            push(if lr.is_empty() { "ULS 1.2D + 1.6L".into() } else { "ULS 1.2D + 1.6L + 0.5Lr".into() }, ComboKind::Uls, cat(cat(with(&d, 1.2), with(&l, 1.6)), with(&lr, 0.5)));
+            if !lr.is_empty() {
+                push("ULS 1.2D + 1.6Lr + L".into(), ComboKind::Uls, cat(cat(with(&d, 1.2), with(&lr, 1.6)), with(&l, 1.0)));
+            }
+            for &wi in &w {
+                push(format!("ULS 1.2D + L{} + 1.0{}", if lr.is_empty() { "" } else { " + 0.5Lr" }, wname(wi)), ComboKind::Uls, cat(cat(cat(with(&d, 1.2), with(&l, 1.0)), with(&lr, 0.5)), vec![(wi, 1.0)]));
+                push(format!("ULS 0.9D + 1.0{}", wname(wi)), ComboKind::Uls, cat(with(&d, 0.9), vec![(wi, 1.0)]));
+            }
+        }
+        push("SLS D + L".into(), ComboKind::Sls, cat(with(&d, 1.0), with(&l, 1.0)));
+        out
+    }
+}
+
+thread_local! {
+    static ACTIVE: std::cell::Cell<DesignStandard> = const { std::cell::Cell::new(DesignStandard::Aci) };
+}
+
+/// The strength reduction factors of the standard the current design pass uses.
+pub fn phi() -> Phi {
+    ACTIVE.with(|a| a.get()).phi()
+}
+
+/// Makes `s` the standard of this thread's design until the guard drops (the design pass runs
+/// on one thread, so each pass, and each test, sees its own).
+pub fn use_standard(s: DesignStandard) -> StandardGuard {
+    StandardGuard(ACTIVE.with(|a| a.replace(s)))
+}
+
+pub struct StandardGuard(DesignStandard);
+
+impl Drop for StandardGuard {
+    fn drop(&mut self) {
+        ACTIVE.with(|a| a.set(self.0));
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SteelCode {
@@ -389,5 +521,38 @@ mod tests {
         assert_eq!(ec3_class(h, 275.0, false).0, 1);
         // in compression the web limit 33ε = 30.5 < 39.4 ≤ 38ε = 35.1? no: 39.4 > 42ε = 38.8 → class 4
         assert_eq!(ec3_class(h, 275.0, true).0, 4);
+    }
+
+    #[test]
+    fn thai_regulation_2566() {
+        use crate::model::Model;
+        // clause 7 combinations from the default cases D and L, and a wind case
+        let mut m = Model::new("t");
+        m.cases.push(crate::model::LoadCase { id: 3, name: "Wx".into(), kind: crate::model::CaseKind::W, self_weight: false });
+        let c = DesignStandard::Mr2566.combinations(&m.cases);
+        let names: Vec<_> = c.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, ["ULS 1.4D + 1.7L", "ULS 0.75(1.4D + 1.7L) + 1.6Wx", "ULS 0.9D + 1.6Wx", "SLS D + L"]);
+        assert_eq!(c[1].factors, vec![(1, 1.05), (2, 1.275), (3, 1.6)]);
+        assert_eq!(DesignStandard::Mr2566.gravity(5.0, 2.0), 1.4 * 5.0 + 1.7 * 2.0);
+        // clause 8 φ: tied columns 0.70 (0.60 without quality control) against ACI's 0.65
+        let (_, aci) = crate::rc::column_p0(400.0 * 400.0, 2000.0, 24.0, 390.0);
+        let thai = {
+            let _g = use_standard(DesignStandard::Mr2566);
+            assert_eq!(crate::rc::phi_tied(0.0, 390.0), 0.70);
+            assert_eq!(crate::rc::phi_tied(0.01, 390.0), 0.90);
+            crate::rc::column_p0(400.0 * 400.0, 2000.0, 24.0, 390.0).1
+        };
+        assert!((thai / aci - 0.70 / 0.65).abs() < 1e-12);
+        {
+            let _g = use_standard(DesignStandard::Mr2566NoQc);
+            assert_eq!(crate::rc::phi_tied(0.01, 390.0), 0.75);
+            let ok = crate::rc::phi_mn(1000.0, 300.0, 500.0, 24.0, 390.0);
+            drop(_g);
+            assert!((ok / crate::rc::phi_mn(1000.0, 300.0, 500.0, 24.0, 390.0) - 0.75 / 0.90).abs() < 1e-12);
+        }
+        // the guard restores ACI
+        assert_eq!(phi().tied, 0.65);
+        // serde names
+        assert_eq!(serde_json::to_value(DesignStandard::Mr2566NoQc).unwrap(), "mr2566_noqc");
     }
 }

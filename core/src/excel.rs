@@ -263,8 +263,8 @@ pub fn export(model: &Model, a: Option<&Analysis>, rep: Option<&Report>, path: &
         })
         .collect();
     table(&mut wb, "Loads", &["case", "type", "node", "member", "a", "b", "fx", "fy", "fz", "mx", "my", "mz", "wj_x", "wj_y", "wj_z", "dt", "dt_y", "dt_z"], &rows)?;
-    let rows: Vec<Vec<C>> = model.slabs.iter().map(|x| vec![n(x.id as f64), s(x.name.clone()), n(x.x0), n(x.y0), n(x.x1), n(x.y1), n(x.z), n(x.h), n(x.dead), n(x.live), os(&x.bim_id), n(x.subgrade), n(if x.mat { 1.0 } else { 0.0 }), n(x.support_size)]).collect();
-    table(&mut wb, "Slabs", &["id", "name", "x0", "y0", "x1", "y1", "z", "h", "dead", "live", "bim_id", "subgrade", "mat", "support_size"], &rows)?;
+    let rows: Vec<Vec<C>> = model.slabs.iter().map(|x| vec![n(x.id as f64), s(x.name.clone()), n(x.x0), n(x.y0), n(x.x1), n(x.y1), n(x.z), n(x.h), n(x.dead), n(x.live), os(&x.bim_id), n(x.subgrade), n(if x.mat { 1.0 } else { 0.0 }), n(x.support_size), n(if x.plate { 1.0 } else { 0.0 })]).collect();
+    table(&mut wb, "Slabs", &["id", "name", "x0", "y0", "x1", "y1", "z", "h", "dead", "live", "bim_id", "subgrade", "mat", "support_size", "plate"], &rows)?;
     let js = |v: Value| s(v.to_string());
     let rows = vec![
         vec![s("name"), js(json!(model.name))],
@@ -541,7 +541,7 @@ pub fn import(path: &Path) -> Result<Model, String> {
     if let Some(rows) = sheet(&mut wb, "Slabs") {
         for (k, r) in rows.iter().enumerate() {
             let g = |f: &str| num_of(r, f).unwrap_or(0.0);
-            m.slabs.push(Slab { id: id_of(r, "id").unwrap_or(k + 1), name: str_of(r, "name").unwrap_or_default(), x0: g("x0"), y0: g("y0"), x1: g("x1"), y1: g("y1"), z: g("z"), h: g("h"), dead: g("dead"), live: g("live"), bim_id: str_of(r, "bim_id"), subgrade: g("subgrade"), mat: g("mat") > 0.5, support_size: g("support_size") });
+            m.slabs.push(Slab { id: id_of(r, "id").unwrap_or(k + 1), name: str_of(r, "name").unwrap_or_default(), x0: g("x0"), y0: g("y0"), x1: g("x1"), y1: g("y1"), z: g("z"), h: g("h"), dead: g("dead"), live: g("live"), bim_id: str_of(r, "bim_id"), subgrade: g("subgrade"), mat: g("mat") > 0.5, support_size: g("support_size"), plate: g("plate") > 0.5 });
         }
     }
     crate::walls::sync(&mut m);

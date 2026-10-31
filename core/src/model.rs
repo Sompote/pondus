@@ -408,6 +408,19 @@ pub struct Slab {
     /// (0: 0.3 m).
     #[serde(default)]
     pub support_size: f64,
+    /// Analysed as plate finite elements whatever the slab method: a flat plate (a floor on
+    /// columns with no beams), which the coefficient method cannot carry (it hands the load
+    /// to beams by the 45° lines). The other slabs keep the model's method.
+    #[serde(default)]
+    pub plate: bool,
+}
+
+impl Model {
+    /// Whether a slab is analysed and designed as plate finite elements: every slab under the
+    /// plate method, and under the coefficient method a flat plate, a mat or a slab on soil.
+    pub fn plate_slab(&self, s: &Slab) -> bool {
+        self.design.slab_method == crate::slabfe::SlabMethod::Plate || s.plate || s.mat || s.subgrade > 0.0
+    }
 }
 
 impl Slab {
@@ -482,6 +495,10 @@ pub struct DesignSettings {
     /// The end connection of steel members in tension (unless a member gives its own), from
     /// which the net area An and the shear lag factor U of tensile rupture follow.
     pub tension_connection: TensionConnection,
+    /// The load and strength reduction factors: ACI 318-19 / AISC 360-16 / ASCE 7-22, or the
+    /// Thai Ministerial Regulation on structural design B.E. 2566 (with or without specified
+    /// quality control).
+    pub standard: crate::codes::DesignStandard,
 }
 
 /// How a steel H member's end is connected, for its tensile rupture: the net area An (holes
@@ -601,6 +618,7 @@ impl Default for DesignSettings {
             connection: Default::default(),
             vibration_hz: 3.0,
             tension_connection: Default::default(),
+            standard: Default::default(),
         }
     }
 }

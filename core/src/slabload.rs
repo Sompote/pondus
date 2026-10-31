@@ -65,7 +65,8 @@ pub fn loads(model: &Model, warnings: &mut Vec<String>) -> (Vec<MemberLoad>, [f6
     if lc.is_none() && model.slabs.iter().any(|s| s.live > 0.0) {
         warnings.push("no live load case: the slabs' live loads are left out".into());
     }
-    for s in &model.slabs {
+    // a plate slab carries its own load on its elements
+    for s in model.slabs.iter().filter(|s| !model.plate_slab(s)) {
         let ls = s.lx().min(s.ly());
         let ow = one_way(s);
         let qs = [(dc, gamma * s.h + s.dead), (lc, s.live)];

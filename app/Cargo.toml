@@ -1,6 +1,6 @@
 [package]
 name = "pondus"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Pondus: agentic structural analysis and design. An agent builds, analyses and designs the structure; the engineer checks it."
 license = "AGPL-3.0-only"

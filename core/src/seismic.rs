@@ -413,16 +413,24 @@ pub(crate) fn nodal_masses(model: &Model, node_of: &HashMap<Id, usize>) -> HashM
 }
 
 /// The seismic strength combinations (ASCE 7-22 2.3.6 with E = ρQE ± 0.2·SDS·D):
-/// (1.2 + 0.2 SDS) D + f·L ± ρ Ex / Ey, and (0.9 − 0.2 SDS) D ± ρ Ex / Ey.
+/// (1.2 + 0.2 SDS) D + f·L ± ρ Ex / Ey, and (0.9 − 0.2 SDS) D ± ρ Ex / Ey. By the Thai
+/// Ministerial Regulation B.E. 2566 (clause 7(3)): 0.75(1.4D + 1.7L) ± 1.0 ρ Ex / Ey and
+/// 0.9D ± 1.0 ρ Ex / Ey, with no vertical term.
 pub fn combos(model: &Model, a: &Analysis) -> Vec<(String, CaseResult)> {
     let Some(s) = &a.seismic else { return vec![] };
     let sc = &model.seismic;
     let sds = sc.spectrum.sds();
+    let thai = model.design.standard.is_thai();
     let d: Vec<Id> = model.cases.iter().filter(|c| c.kind == CaseKind::D).map(|c| c.id).collect();
     let l: Vec<Id> = model.cases.iter().filter(|c| matches!(c.kind, CaseKind::L | CaseKind::Lr)).map(|c| c.id).collect();
     let mut out = vec![];
     for dir in &s.dirs {
-        for (base, label, live) in [(1.2 + 0.2 * sds, format!("{:.2}D + {}L", 1.2 + 0.2 * sds, sc.live_in_e), sc.live_in_e), (0.9 - 0.2 * sds, format!("{:.2}D", 0.9 - 0.2 * sds), 0.0)] {
+        let sets = if thai {
+            [(1.05, "0.75(1.4D + 1.7L)".to_string(), 1.275), (0.9, "0.9D".to_string(), 0.0)]
+        } else {
+            [(1.2 + 0.2 * sds, format!("{:.2}D + {}L", 1.2 + 0.2 * sds, sc.live_in_e), sc.live_in_e), (0.9 - 0.2 * sds, format!("{:.2}D", 0.9 - 0.2 * sds), 0.0)]
+        };
+        for (base, label, live) in sets {
             let mut f: Vec<(Id, f64)> = d.iter().map(|c| (*c, base)).collect();
             f.extend(l.iter().map(|c| (*c, live)));
             for sign in [1.0, -1.0] {

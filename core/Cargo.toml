@@ -1,6 +1,6 @@
 [package]
 name = "pondus-core"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Pondus core: the structural model, analysis with the Stabileo engine, RC and steel design, and the MCP server"
 license = "AGPL-3.0-only"
